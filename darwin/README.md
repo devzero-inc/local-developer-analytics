@@ -51,6 +51,5 @@ This command will tell you whether SIP is enabled or disabled.
 Remember, disabling SIP should only be done by users who have a clear understanding of the risks and steps involved. Always ensure to re-enable SIP after performing the necessary system-level tasks.
 
 
-
-
-
+# OpenBSM
+OpenBSM (Basic Security Module) is an open source implementation of Sun's Basic Security Module (BSM) Audit API and file format, which provides a framework for auditing and monitoring security-related events on Unix-like operating systems, including macOS. Auditing with OpenBSM can help track system calls, file accesses, and other system activities, potentially allowing for the detailed analysis of command executions and their durations.
