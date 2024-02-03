@@ -9,15 +9,25 @@ This implements metrics around step 2 in DORA metrics, lead time to changes (LT)
 
 # Open Considerations
 ## Deployment Model
-So far, if we expect this to run on developer laptops, the interaction is either manually initiated or needs device management.
+So far, if we expect this to run on developer laptops, the interaction is either:
+- manually initiated for a single command, or
+- manually initiated for system-wide integration, or
+- installed across a fleet of laptops using device management products.
 
 ## What specific metrics do we want
 * Time it takes to execute a command
-* Time spent waiting on network calls (i.e. downloading packages for dev)
+* Directory command was executed in
+* $USER variable in the context of which the command was run
+* Exit code of the command that was run
+* Host metadata about local hardware (eg: `uname -a`)
+* [later] Time spent waiting on network calls (i.e. downloading packages for dev)
+* [later] State of local disk
+* [later] State of developer caches at known locations
 
 ## Product Requirements
 * Aggregation endpoint that stores metadata and enables dashboards/insights to be built/rendered
 * Dashboards that automatically highlight critical chokepoints/inefficiencies for developers -- things like command time execution specifically around tests running or waiting for rebuilds.
+* [next] Resilience to lack of network (by storing locally till network is available)
 
 ## Project Phases
 
