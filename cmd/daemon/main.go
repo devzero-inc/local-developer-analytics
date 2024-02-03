@@ -24,7 +24,7 @@ func main() {
 	defer client.Close()
 
 	// TCP listener for incoming data
-	PORT := ":8080"
+	PORT := ":8086"
 	listener, err := net.Listen("tcp", PORT)
 	if err != nil {
 		fmt.Println("Error creating TCP listener:", err)
@@ -57,6 +57,7 @@ func handleConnection(conn net.Conn, client influxdb2.Client) {
 }
 
 func writeDataToInfluxDB(client influxdb2.Client, data string) {
+    fmt.Println("Writing Data to InfluxDB", data)
 	// Split the data into its components
 	parts := strings.Split(data, ", ")
 	if len(parts) != 3 {
