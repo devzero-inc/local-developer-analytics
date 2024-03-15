@@ -1,0 +1,19 @@
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>devzero.io.lda</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{.BinaryPath}}</string>
+        <string>collect</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/devzero.io.lda.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/devzero.io.lda.err.log</string>
+</dict>
+</plist>
