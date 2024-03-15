@@ -59,6 +59,7 @@ func init() {
 	cobra.OnInitialize(initLogging)
 
 	ldaCmd.AddCommand(versionCmd)
+	ldaCmd.AddCommand(collectCmd)
 	ldaCmd.AddCommand(startCmd)
 	ldaCmd.AddCommand(stopCmd)
 	ldaCmd.AddCommand(installCmd)
