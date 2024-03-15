@@ -14,6 +14,27 @@ import (
 //go:embed views/*
 var templateFS embed.FS
 
+type ChartConfig struct {
+	Type    string       `json:"type"`
+	Data    ChartData    `json:"data"`
+	Options ChartOptions `json:"options"`
+}
+
+type ChartData struct {
+	Labels   []string        `json:"labels"`
+	Datasets []ChartDataSets `json:"datasets"`
+}
+
+type ChartDataSets struct {
+	Label string  `json:"label"`
+	Data  []int64 `json:"data"`
+}
+
+type ChartOptions struct {
+	MaintainAspectRatio bool `json:"maintainAspectRatio"`
+	AspectRatio         int  `json:"aspectRatio"`
+}
+
 func Serve() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
@@ -149,8 +170,36 @@ func Serve() {
 		commands := collector.GetAllCommandsForCategoryForPeriod(
 			label, startMillis, endMillis)
 
+		var labels []string
+		var dataPoints []int64
+
+		for _, cmd := range commands {
+			labels = append(labels, cmd.Command)
+			dataPoints = append(dataPoints, cmd.ExecutionTime)
+		}
+
+		// Construct the chart data
+		chartDataSets := ChartDataSets{
+			Label: "Execution Time",
+			Data:  dataPoints,
+		}
+
+		chartData := ChartData{
+			Labels:   labels,
+			Datasets: []ChartDataSets{chartDataSets},
+		}
+
+		chartConfig := ChartConfig{
+			Type: "pie",
+			Data: chartData,
+			Options: ChartOptions{
+				MaintainAspectRatio: true,
+				AspectRatio:         4,
+			},
+		}
+
 		// Serialize the commands to JSON strings
-		commandsJSON, err := json.Marshal(commands)
+		chartJSON, err := json.Marshal(chartConfig)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -173,9 +222,9 @@ func Serve() {
 		}
 
 		tmpl.Execute(w, map[string]interface{}{
-			"CommandsJSON": string(commandsJSON),
-			"StartTime":    start,
-			"EndTime":      end,
+			"ChartJSON": string(chartJSON),
+			"StartTime": start,
+			"EndTime":   end,
 		})
 
 	})
