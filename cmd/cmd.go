@@ -162,48 +162,7 @@ func install(_ *cobra.Command, _ []string) {
 
 	shell.InitShellConfiguration()
 
-	logging.Log.Info().Msg("Installing daemon service")
-
-	var filePath string
-	var fileContent []byte
-
-	if config.OS == config.Linux {
-		filePath = filepath.Join(
-			config.HomeDir,
-			daemon.DaemonServicedFilePath,
-			daemon.DaemonServicedName)
-		fileContent = []byte(daemon.DaemonServiced)
-	} else if config.OS == config.MacOS {
-		filePath = filepath.Join(
-			config.HomeDir,
-			daemon.DaemonPlistFilePath,
-			daemon.DaemonPlistName)
-		fileContent = []byte(daemon.DaemonPlist)
-	}
-
-	if filePath == "" {
-		logging.Log.Error().Msg("Unsupported operating system")
-		return
-	}
-
-	// Check if the file already exists
-	if _, err := os.Stat(filePath); err == nil {
-		logging.Log.Info().Msg("Daemon service file already exists")
-		return
-	} else if !os.IsNotExist(err) {
-		// An error other than "not exists", e.g., permission issues
-		logging.Log.Err(err).Msg("Failed to check daemon service file")
-		return
-	}
-
-	// File does not exist, proceed with writing
-	err := os.WriteFile(filePath, fileContent, daemon.DaemonPermission)
-	if err != nil {
-		logging.Log.Err(err).Msg("Failed to write daemon service file")
-		return
-	}
-
-	logging.Log.Info().Msg("Daemon service installed successfully")
+	daemon.InitDaemonConfiguration()
 
 	shell.InjectShellSource()
 }
