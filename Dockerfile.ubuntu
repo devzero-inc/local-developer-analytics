@@ -3,7 +3,7 @@ FROM golang:1.22
 
 # Install Go and any other dependencies you might need
 RUN apt-get update && \
-    apt-get install -y git bash zsh fish netcat-openbsd && \
+    apt-get install -y git vim bash zsh fish && \
     apt-get clean
 
 # Set the SHELL environment variable
@@ -11,9 +11,5 @@ ENV SHELL /bin/bash
 
 # Set the working directory in the container
 WORKDIR /app
-
-RUN useradd -m lda 
-
-USER lda
 
 CMD ["tail", "-f", "/dev/null"]
