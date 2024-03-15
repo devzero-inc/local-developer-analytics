@@ -2,6 +2,7 @@ package main
 
 import (
 	"lda/cmd"
+	"lda/config"
 	"lda/logging"
 	"os"
 )
@@ -20,6 +21,12 @@ func init() {
 		os.Stdout,
 		true,
 	)
+
+	// setting up the operating system
+	config.SetupOs()
+
+	// setting up the home directory
+	config.SetupHomeDir()
 }
 
 func main() {
