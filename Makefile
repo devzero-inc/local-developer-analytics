@@ -4,10 +4,8 @@ BIN := /usr/local/bin
 REV := $(shell git rev-parse HEAD)
 CHANGES := $(shell test -n "$$(git status --porcelain)" && echo '+CHANGES' || true)
 
-PROTO_LOCATION := $(shell find proto -iname "proto" -exec echo "-I="{} \;)
-
-PACKAGE = lda 
-TARGET = lda 
+PACKAGE = lda
+TARGET = lda
 
 VERSION?=0.2.0
 COMMIT=$(shell git rev-parse --short HEAD)
