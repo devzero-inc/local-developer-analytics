@@ -22,6 +22,7 @@ const (
 )
 
 // Embedding scripts directory
+//
 //go:embed services/*
 var templateFS embed.FS
 
@@ -37,13 +38,13 @@ func InitDaemonConfiguration() {
 			config.HomeDir,
 			DaemonServicedFilePath,
 			DaemonServicedName)
-		configLocation = "configs/lda.service"
+		configLocation = "services/lda.service"
 	} else if config.OS == config.MacOS {
 		filePath = filepath.Join(
 			config.HomeDir,
 			DaemonPlistFilePath,
 			DaemonPlistName)
-		configLocation = "configs/lda.plist"
+		configLocation = "services/lda.plist"
 	}
 
 	if filePath == "" {
