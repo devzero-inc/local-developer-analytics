@@ -2,7 +2,6 @@ package collector
 
 import (
 	"context"
-	"encoding/json"
 	"lda/logging"
 	"net"
 	"os"
@@ -99,8 +98,8 @@ func collectSystemInformation(ctx context.Context) {
 					PID:            int(p.Pid),
 					Name:           name,
 					Status:         status,
-					StartTime:      time.Unix(createTime/1000, (createTime%1000)*1e6).Format("2006-01-02 15:04:05"),
-					EndTime:        now.Format("2006-01-02 15:04:05"),
+					StartTime:      createTime,
+					EndTime:        now.UnixMilli(),
 					ExecutionTime:  executionTimeMs,
 					OS:             hostInfo.OS,
 					Platform:       hostInfo.Platform,
@@ -112,14 +111,6 @@ func collectSystemInformation(ctx context.Context) {
 				InsertProcess(processInfo)
 				processInfos = append(processInfos, processInfo)
 			}
-
-			jsonData, err := json.MarshalIndent(processInfos, "", "    ")
-			if err != nil {
-				logging.Log.Err(err).Msg("Error marshalling data to JSON")
-				continue
-			}
-
-			logging.Log.Debug().Msg(string(jsonData))
 		}
 	}
 }
@@ -167,21 +158,37 @@ func collectCommandInformation() error {
 
 			// Use strings.TrimSpace to remove any leading/trailing whitespace or newlines
 			executionTimeString := strings.TrimSpace(parts[5])
+			startTimeString := strings.TrimSpace(parts[3])
+			endTimeString := strings.TrimSpace(parts[4])
 
-			// Now convert the cleaned-up string to int64
 			executionTimeMs, err := strconv.ParseInt(executionTimeString, 10, 64)
 			if err != nil {
 				logging.Log.Error().Err(err).Msg("Invalid execution time format")
 				return
 			}
 
+			startTimeTimestamp, err := strconv.ParseInt(startTimeString, 10, 64)
+			if err != nil {
+				logging.Log.Error().Err(err).Msg("Invalid start time format")
+				return
+			}
+
+			endTimeTimestamp, err := strconv.ParseInt(endTimeString, 10, 64)
+			if err != nil {
+				logging.Log.Error().Err(err).Msg("Invalid end time format")
+				return
+			}
+
+			logging.Log.Debug().Msgf("Parsing command: %s", parts[0])
+
 			command := Command{
+				Category:      ParseCommand(parts[0]),
 				Command:       parts[0],
 				Directory:     parts[1],
 				User:          parts[2],
-				StartTime:     parts[3],
-				EndTime:       parts[4],
-				ExecutionTime: executionTimeMs, // Use the converted int64 value
+				StartTime:     startTimeTimestamp,
+				EndTime:       endTimeTimestamp,
+				ExecutionTime: executionTimeMs,
 			}
 
 			InsertCommand(command)
