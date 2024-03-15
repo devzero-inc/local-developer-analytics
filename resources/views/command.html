@@ -32,25 +32,10 @@
   </body>
   <script>
     (async function() {
-      // Use the injected JSON data
-      const commandsData = JSON.parse(`{{.CommandsJSON}}`);
+      const chartData = JSON.parse(`{{.ChartJSON}}`);
 
-      if (commandsData != null) {
-        // Initialize the Commands Execution Time Chart as before
-        new Chart(document.getElementById('commandsExecutionTime'), {
-          type: 'pie',
-          data: {
-            labels: commandsData.map(cmd => cmd.command),
-            datasets: [{
-              label: 'Execution Time (ms)',
-              data: commandsData.map(cmd => cmd.executionTime),
-            }]
-          },
-          options: {
-            maintainAspectRatio: true,
-            aspectRatio: 4,
-          }
-        });
+      if (chartData != null) {
+        new Chart(document.getElementById('commandsExecutionTime'), chartData);
       }
     })();
   </script>

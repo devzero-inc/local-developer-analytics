@@ -15,8 +15,6 @@ func Setup() {
 
 	dbPath := filepath.Join(config.LdaDir, "lda.db")
 
-	logging.Log.Debug().Msgf("Setting up database at %s", dbPath)
-
 	db, err := sqlx.Connect("sqlite3", dbPath)
 	if err != nil {
 		logging.Log.Fatal().Err(err).Msg("Failed to setup database")

@@ -20,7 +20,7 @@ func init() {
 	// setting up the Logger
 	logging.Setup(
 		os.Stdout,
-		true,
+		false,
 	)
 
 	// setting up the operating system
