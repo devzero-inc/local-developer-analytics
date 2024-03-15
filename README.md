@@ -1,11 +1,6 @@
-![The devzero logo](https://assets-global.website-files.com/659f77ad8e06050cc27ed4d3/65aaf7abd1a9b99456f6154a_Devzero%20logo%20on%20dark-p-500.png)
+![The devzero logo](https://console.devzero.io/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ffull_logo.379052d8.png&w=1080&q=75)
 
 # LDA
-
-#[![License]()]()
-#[![Release]()]()
-#[![CI]()]()
-#[![Homebrew]()]()
 
 The [LDA][lda] CLI is local developer analytics tool. It provides:
 
