@@ -10,21 +10,22 @@
 # $6 - Duration of command execution in seconds
 
 # UNIX socket path
-SOCKET_PATH="/tmp/myapp.socket"
+SOCKET_PATH="{{.SocketPath}}"
 
 # Determine the system's 'date' command flavor and format the date accordingly
-if date --version >/dev/null 2>&1; then
-    # GNU 'date'
-    FORMATTED_START_DATE=$(date -d "@$4" '+%Y-%m-%d %H:%M:%S')
-    FORMATTED_END_DATE=$(date -d "@$5" '+%Y-%m-%d %H:%M:%S')
-else
-    # BSD 'date'
-    FORMATTED_START_DATE=$(date -r "$4" '+%Y-%m-%d %H:%M:%S')
-    FORMATTED_END_DATE=$(date -r "$5" '+%Y-%m-%d %H:%M:%S')
-fi
+#if date --version >/dev/null 2>&1; then
+#    # GNU 'date'
+#    FORMATTED_START_DATE=$(date -d "@$4" '+%Y-%m-%d %H:%M:%S')
+#    FORMATTED_END_DATE=$(date -d "@$5" '+%Y-%m-%d %H:%M:%S')
+#else
+#    # BSD 'date'
+#    FORMATTED_START_DATE=$(date -r "$4" '+%Y-%m-%d %H:%M:%S')
+#    FORMATTED_END_DATE=$(date -r "$5" '+%Y-%m-%d %H:%M:%S')
+#fi
 
 # Construct the log message with start time, end time, and duration
-LOG_MESSAGE="$2:$3:Start $FORMATTED_START_DATE:End $FORMATTED_END_DATE:Duration $6 seconds:$1"
+#LOG_MESSAGE="$2:$3:Start $FORMATTED_START_DATE:End $FORMATTED_END_DATE:Duration $6 seconds:$1"
+LOG_MESSAGE="$1|$2|$3|$4|$5|$6"
 
 # Send the log message to the Go application via UNIX socket
 echo "$LOG_MESSAGE" | nc -U "$SOCKET_PATH"

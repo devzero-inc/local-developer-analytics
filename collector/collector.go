@@ -15,7 +15,7 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
-const socketPath = "/tmp/lda.socket"
+const SocketPath = "/tmp/lda.socket"
 
 func Collect() {
 
@@ -116,19 +116,19 @@ func collectSystemInformation(ctx context.Context) {
 }
 
 func collectCommandInformation() error {
-	if err := os.RemoveAll(socketPath); err != nil {
+	if err := os.RemoveAll(SocketPath); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to clean up existing socket")
 		return err
 	}
 
-	listener, err := net.Listen("unix", socketPath)
+	listener, err := net.Listen("unix", SocketPath)
 	if err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to listen on UNIX socket")
 		return err
 	}
 	defer listener.Close()
 
-	logging.Log.Info().Msg("Listening on " + socketPath)
+	logging.Log.Info().Msg("Listening on " + SocketPath)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {

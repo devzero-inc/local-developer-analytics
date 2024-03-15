@@ -6,6 +6,15 @@ import (
 	"runtime"
 )
 
+type ShellType int
+
+const (
+	Bash ShellType = 0
+	Zsh  ShellType = 1
+	Fish ShellType = 2
+	Sh   ShellType = 3
+)
+
 type OSType int
 
 const (
@@ -16,6 +25,8 @@ const (
 var (
 	// OS is the operating system
 	OS OSType
+	// Shell is the active shell
+	Shell ShellType
 	// HomeDir is the user home directory
 	HomeDir string
 )
@@ -33,6 +44,28 @@ func SetupOs() {
 		logging.Log.Fatal().Msg("Unsupported operating system")
 		os.Exit(1)
 	}
+}
+
+// SetupShell sets the current active shell
+func SetupShell() {
+	switch os.Getenv("SHELL") {
+	case "/bin/bash":
+		logging.Log.Info().Msg("Running bash shell")
+		Shell = Bash
+	case "/bin/zsh":
+		logging.Log.Info().Msg("Running zsh shell")
+		Shell = Zsh
+	case "/bin/fish":
+		logging.Log.Info().Msg("Running fish shell")
+		Shell = Fish
+	case "/bin/sh":
+		logging.Log.Info().Msg("Running sh shell")
+		Shell = Sh
+	default:
+		logging.Log.Fatal().Msg("Unsupported shell")
+		os.Exit(1)
+	}
+
 }
 
 // SetHomeDir sets the user home directory

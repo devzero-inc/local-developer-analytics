@@ -4,6 +4,7 @@ import (
 	"lda/config"
 	"lda/daemon"
 	"lda/logging"
+	"lda/shell"
 	"lda/ui"
 	"net/http"
 	"os"
@@ -159,6 +160,8 @@ func stop(_ *cobra.Command, _ []string) {
 
 func install(_ *cobra.Command, _ []string) {
 
+	shell.InitShellConfiguration()
+
 	logging.Log.Info().Msg("Installing daemon service")
 
 	var filePath string
@@ -201,6 +204,8 @@ func install(_ *cobra.Command, _ []string) {
 	}
 
 	logging.Log.Info().Msg("Daemon service installed successfully")
+
+	shell.InjectShellSource()
 }
 
 func uninstall(_ *cobra.Command, _ []string) {
