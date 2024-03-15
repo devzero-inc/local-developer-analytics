@@ -1,8 +1,10 @@
 package daemon
 
 const (
-	DaemonPlistFilePath    = "Library/LaunchAgents/lda.plist"
-	DaemonServicedFilePath = ".config/systemd/user/lda.service"
+	DaemonPlistFilePath    = "Library/LaunchAgents"
+	DaemonPlistName        = "lda.plist"
+	DaemonServicedFilePath = ".config/systemd/user"
+	DaemonServicedName     = "lda.service"
 	DaemonPermission       = 0644
 )
 

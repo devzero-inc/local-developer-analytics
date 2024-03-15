@@ -5,6 +5,7 @@ import (
 	"lda/daemon"
 	"lda/logging"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -84,13 +85,65 @@ func lda(cmd *cobra.Command, _ []string) {
 }
 
 func start(_ *cobra.Command, _ []string) {
-
 	logging.Log.Info().Msg("Starting daemon service")
+
+	var cmd *exec.Cmd
+
+	if config.OS == config.Linux {
+		cmd = exec.Command(
+			"systemctl",
+			"--user",
+			"start",
+			daemon.DaemonServicedName)
+	} else if config.OS == config.MacOS {
+		path := filepath.Join(
+			config.HomeDir,
+			daemon.DaemonPlistFilePath,
+			daemon.DaemonPlistName)
+		cmd = exec.Command(
+			"launchctl",
+			"load",
+			"-w",
+			path)
+	}
+
+	if err := cmd.Run(); err != nil {
+		logging.Log.Err(err).Msg("Failed to start daemon service")
+		return
+	}
+
+	logging.Log.Info().Msg("Daemon service started successfully")
 }
 
 func stop(_ *cobra.Command, _ []string) {
-
 	logging.Log.Info().Msg("Stoping daemon service")
+
+	var cmd *exec.Cmd
+
+	if config.OS == config.Linux {
+		cmd = exec.Command(
+			"systemctl",
+			"--user",
+			"stop",
+			daemon.DaemonServicedName)
+	} else if config.OS == config.MacOS {
+		path := filepath.Join(
+			config.HomeDir,
+			daemon.DaemonPlistFilePath,
+			daemon.DaemonPlistName)
+		cmd = exec.Command(
+			"launchctl",
+			"unload",
+			"-w",
+			path)
+	}
+
+	if err := cmd.Run(); err != nil {
+		logging.Log.Err(err).Msg("Failed to stop daemon service")
+		return
+	}
+
+	logging.Log.Info().Msg("Daemon service stoped successfully")
 }
 
 func install(_ *cobra.Command, _ []string) {
@@ -101,10 +154,16 @@ func install(_ *cobra.Command, _ []string) {
 	var fileContent []byte
 
 	if config.OS == config.Linux {
-		filePath = filepath.Join(config.HomeDir, daemon.DaemonServicedFilePath)
+		filePath = filepath.Join(
+			config.HomeDir,
+			daemon.DaemonServicedFilePath,
+			daemon.DaemonServicedName)
 		fileContent = []byte(daemon.DaemonServiced)
 	} else if config.OS == config.MacOS {
-		filePath = filepath.Join(config.HomeDir, daemon.DaemonPlistFilePath)
+		filePath = filepath.Join(
+			config.HomeDir,
+			daemon.DaemonPlistFilePath,
+			daemon.DaemonPlistName)
 		fileContent = []byte(daemon.DaemonPlist)
 	}
 
@@ -139,9 +198,15 @@ func uninstall(_ *cobra.Command, _ []string) {
 	var filePath string
 
 	if config.OS == config.Linux {
-		filePath = filepath.Join(config.HomeDir, daemon.DaemonServicedFilePath)
+		filePath = filepath.Join(
+			config.HomeDir,
+			daemon.DaemonServicedFilePath,
+			daemon.DaemonServicedName)
 	} else if config.OS == config.MacOS {
-		filePath = filepath.Join(config.HomeDir, daemon.DaemonPlistFilePath)
+		filePath = filepath.Join(
+			config.HomeDir,
+			daemon.DaemonPlistFilePath,
+			daemon.DaemonPlistName)
 	}
 
 	if filePath == "" {
