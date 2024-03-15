@@ -102,6 +102,11 @@ docker-compose:
 	docker-compose build
 	docker-compose up
 
+## Rebuild dockerfile and run docker compose - ubuntu
+docker-compose-ubuntu:
+	docker-compose -f ubuntu.docker-compose.yml build
+	docker-compose -f ubuntu.docker-compose.yml up
+
 # ## Push docker image to registry
 docker-push:
 	$(eval NAME=${DOCKER_REGISTRY}/${TARGET})

@@ -1,15 +1,12 @@
 package cmd
 
 import (
-	"lda/config"
 	"lda/daemon"
 	"lda/logging"
+	"lda/resources"
 	"lda/shell"
-	"lda/ui"
 	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -97,65 +94,11 @@ func lda(cmd *cobra.Command, _ []string) {
 }
 
 func start(_ *cobra.Command, _ []string) {
-	logging.Log.Info().Msg("Starting daemon service")
-
-	var cmd *exec.Cmd
-
-	if config.OS == config.Linux {
-		cmd = exec.Command(
-			"systemctl",
-			"--user",
-			"start",
-			daemon.DaemonServicedName)
-	} else if config.OS == config.MacOS {
-		path := filepath.Join(
-			config.HomeDir,
-			daemon.DaemonPlistFilePath,
-			daemon.DaemonPlistName)
-		cmd = exec.Command(
-			"launchctl",
-			"load",
-			"-w",
-			path)
-	}
-
-	if err := cmd.Run(); err != nil {
-		logging.Log.Err(err).Msg("Failed to start daemon service")
-		return
-	}
-
-	logging.Log.Info().Msg("Daemon service started successfully")
+	daemon.StartDeamon()
 }
 
 func stop(_ *cobra.Command, _ []string) {
-	logging.Log.Info().Msg("Stoping daemon service")
-
-	var cmd *exec.Cmd
-
-	if config.OS == config.Linux {
-		cmd = exec.Command(
-			"systemctl",
-			"--user",
-			"stop",
-			daemon.DaemonServicedName)
-	} else if config.OS == config.MacOS {
-		path := filepath.Join(
-			config.HomeDir,
-			daemon.DaemonPlistFilePath,
-			daemon.DaemonPlistName)
-		cmd = exec.Command(
-			"launchctl",
-			"unload",
-			"-w",
-			path)
-	}
-
-	if err := cmd.Run(); err != nil {
-		logging.Log.Err(err).Msg("Failed to stop daemon service")
-		return
-	}
-
-	logging.Log.Info().Msg("Daemon service stoped successfully")
+	daemon.StopDaemon()
 }
 
 func install(_ *cobra.Command, _ []string) {
@@ -168,51 +111,13 @@ func install(_ *cobra.Command, _ []string) {
 }
 
 func uninstall(_ *cobra.Command, _ []string) {
-	logging.Log.Info().Msg("Uninstalling daemon service")
-
-	var filePath string
-
-	if config.OS == config.Linux {
-		filePath = filepath.Join(
-			config.HomeDir,
-			daemon.DaemonServicedFilePath,
-			daemon.DaemonServicedName)
-	} else if config.OS == config.MacOS {
-		filePath = filepath.Join(
-			config.HomeDir,
-			daemon.DaemonPlistFilePath,
-			daemon.DaemonPlistName)
-	}
-
-	if filePath == "" {
-		logging.Log.Error().Msg("Unsupported operating system")
-		return
-	}
-
-	// Check if the file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		logging.Log.Info().Msg("Daemon service file does not exist")
-		return
-	} else if err != nil {
-		// An error other than "not exists", e.g., permission issues
-		logging.Log.Err(err).Msg("Failed to check daemon service file")
-		return
-	}
-
-	// File exists, proceed with removal
-	err := os.Remove(filePath)
-	if err != nil {
-		logging.Log.Err(err).Msg("Failed to remove daemon service file")
-		return
-	}
-
-	logging.Log.Info().Msg("Daemon service file removed successfully")
+	daemon.DestroyDaemonConfiguration()
 }
 
 func serve(_ *cobra.Command, _ []string) {
 	logging.Log.Info().Msg("Serving local frontend client on http://localhost:8080")
 
-	ui.Serve()
+	resources.Serve()
 
 	http.ListenAndServe(":8080", nil)
 }

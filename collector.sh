@@ -10,7 +10,7 @@
 # $6 - Duration of command execution in seconds
 
 # UNIX socket path
-SOCKET_PATH="{{.SocketPath}}"
+SOCKET_PATH="/tmp/lda.socket"
 
 # Construct the log message with start time, end time, and duration
 LOG_MESSAGE="$1|$2|$3|$4|$5|$6"

@@ -3,6 +3,7 @@ package config
 import (
 	"lda/logging"
 	"os"
+	"path/filepath"
 	"runtime"
 )
 
@@ -29,6 +30,8 @@ var (
 	Shell ShellType
 	// HomeDir is the user home directory
 	HomeDir string
+	// LdaDir is the directory.
+	LdaDir string
 )
 
 // SetupOs determine the operating system
@@ -48,7 +51,11 @@ func SetupOs() {
 
 // SetupShell sets the current active shell
 func SetupShell() {
-	switch os.Getenv("SHELL") {
+
+	shell := os.Getenv("SHELL")
+	logging.Log.Info().Msgf("Trying to determine the shell: %s", shell)
+
+	switch shell {
 	case "/bin/bash":
 		logging.Log.Info().Msg("Running bash shell")
 		Shell = Bash
@@ -76,4 +83,14 @@ func SetupHomeDir() {
 		os.Exit(1)
 	}
 	HomeDir = home
+}
+
+func SetupLdaDir() {
+
+	dir := filepath.Join(HomeDir, ".lda")
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
+		logging.Log.Err(err).Msg("Failed to create shell configuration directory")
+	}
+
+	LdaDir = dir
 }

@@ -86,7 +86,7 @@ func InsertCommand(command Command) {
 
 func ParseCommand(command string) string {
 
-	// TODO: there might be some other cases as well like watch, time etc
+	// TODO: there might be some other cases as well like: watch, time etc
 	// we might need to figure out how to handle them
 	var pattern = regexp.MustCompile(`^(?:sudo|nohup)?\s*(?:\./|/usr/bin/|/bin/|/usr/local/bin/)?([^/ ]+?)(?:\s|$)`)
 
