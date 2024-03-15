@@ -22,7 +22,7 @@ const (
 )
 
 // Embedding scripts directory
-//go:embed configs/*
+//go:embed services/*
 var templateFS embed.FS
 
 func InitDaemonConfiguration() {
