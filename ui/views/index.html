@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Command Execution Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+</head>
+<body class="p-5">
+    <form action="/" method="get" class="mb-4">
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label for="start">Start Time:</label>
+            <input type="datetime-local" id="start" name="start" value="{{.StartTime}}" class="border rounded p-1">
+        </div>
+        <div>
+            <label for="end">End Time:</label>
+            <input type="datetime-local" id="end" name="end" value="{{.EndTime}}" class="border rounded p-1">
+        </div>
+    </div>
+    <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded">Filter</button>
+    </form>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 shadow-lg rounded-lg">
+            <canvas id="commandsExecutionTime"></canvas>
+        </div>
+        <div class="p-4 shadow-lg rounded-lg">
+            <canvas id="processesResourceUsage"></canvas>
+        </div>
+    </div>
+
+    <script>
+        (async function() {
+            // Use the injected JSON data
+            const commandsData = JSON.parse(`{{.CommandsJSON}}`);
+            const processesData = JSON.parse(`{{.ProcessesJSON}}`);
+
+	    console.log(commandsData);
+	    console.log(processesData);
+
+	    if (commandsData != null) {
+            // Initialize the Commands Execution Time Chart
+            new Chart(document.getElementById('commandsExecutionTime'), {
+                type: 'bar',
+                data: {
+                    labels: commandsData.map(cmd => cmd.command),
+                    datasets: [{
+                        label: 'Execution Time (ms)',
+                        data: commandsData.map(cmd => cmd.executionTime),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+	    }
+
+	    if (processesData != null) {
+            // Initialize the Processes Resource Usage Chart
+            new Chart(document.getElementById('processesResourceUsage'), {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Process Resource Usage',
+                        data: processesData.map(proc => ({ x: proc.cpuUsage, y: proc.usedMemory })),
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'CPU Usage (%)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Memory Usage (GB)'
+                            }
+                        }
+                    }
+                }
+            });
+
+	    }
+        })();
+    </script>
+</body>
+</html>

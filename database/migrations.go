@@ -31,6 +31,7 @@ func createProcessesTable() {
 			name TEXT NOT NULL,
 			status TEXT,
 			start_time TEXT,
+			end_time TEXT,
 			execution_time TEXT,
 			os TEXT,
 			platform TEXT,

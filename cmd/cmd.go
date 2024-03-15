@@ -4,6 +4,8 @@ import (
 	"lda/config"
 	"lda/daemon"
 	"lda/logging"
+	"lda/ui"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,6 +52,13 @@ var (
 		Long:  `Stop daemon runner for LDA Project.`,
 		Run:   stop,
 	}
+
+	serveCmd = &cobra.Command{
+		Use:   "serve",
+		Short: "Serve local client",
+		Long:  `Serve local frontend client for LDA Project.`,
+		Run:   serve,
+	}
 )
 
 func init() {
@@ -64,6 +73,7 @@ func init() {
 	ldaCmd.AddCommand(stopCmd)
 	ldaCmd.AddCommand(installCmd)
 	ldaCmd.AddCommand(uninstallCmd)
+	ldaCmd.AddCommand(serveCmd)
 }
 
 func includeShowFlagsForLda(cmd *cobra.Command) {
@@ -233,4 +243,12 @@ func uninstall(_ *cobra.Command, _ []string) {
 	}
 
 	logging.Log.Info().Msg("Daemon service file removed successfully")
+}
+
+func serve(_ *cobra.Command, _ []string) {
+	logging.Log.Info().Msg("Serving local frontend client on http://localhost:8080")
+
+	ui.Serve()
+
+	http.ListenAndServe(":8080", nil)
 }

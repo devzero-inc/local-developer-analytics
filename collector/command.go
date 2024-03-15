@@ -11,16 +11,31 @@ type Command struct {
 	Command       string `json:"command" db:"command"`
 	User          string `json:"user" db:"user"`
 	Directory     string `json:"directory" db:"directory"`
-	ExecutionTime string `json:"executionTime" db:"execution_time"`
+	ExecutionTime int64  `json:"executionTime" db:"execution_time"`
 	StartTime     string `json:"startTime" db:"start_time"`
 	EndTime       string `json:"endTime" db:"end_time"`
 }
 
-func GetAllCommands() {
+func GetAllCommands() []Command {
 	var commands []Command
 	if err := database.DB.Select(&commands, "SELECT * FROM commands"); err != nil {
 		logging.Log.Err(err).Msg("Failed to get all commands")
 	}
+
+	return commands
+}
+
+func GetAllCommandsForPeriod(start, end string) []Command {
+	var commands []Command
+
+	query := `SELECT * FROM commands WHERE start_time >= ? AND end_time <= ? ORDER BY start_time ASC`
+
+	err := database.DB.Select(&commands, query, start, end)
+	if err != nil {
+		logging.Log.Err(err).Msg("Failed to get commands with start and end times")
+	}
+
+	return commands
 }
 
 func InsertCommand(command Command) {
