@@ -88,6 +88,8 @@ var (
 )
 
 func collect(_ *cobra.Command, _ []string) {
+	logging.Log.Info().Msg("Collecting command and system information")
+
 	// Create a context that listens for the interrupt signal
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
