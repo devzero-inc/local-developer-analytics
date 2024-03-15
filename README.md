@@ -21,12 +21,13 @@ brew install <>
 
 ### Other methods
 
-Install from binary:
+Install from source:
 
 - Clone the project
 - Change directory
-- Run `make build`
-- Move binary to desired `/bin/` location
+- Run `make install`
+  - binary will be in your `$GOPATH/bin`
+  - if your PATH isn't set correctly: export GOPATH=$(go env GOPATH) && export PATH=$PATH:$GOPATH/bin
 
 ## Install & Usage
 

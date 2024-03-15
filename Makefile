@@ -57,6 +57,10 @@ all: build debug
 build:
 	CGO_ENABLED=1 GOOS=$(UNAME) go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
 
+## Install binary to GOPATH
+install:
+	CGO_ENABLED=1 GOOS=$(UNAME) go install -a -tags netgo -ldflags="$(LDFLAGS)"
+
 ## Build and debug
 debug: build
 	./$(TARGET)
