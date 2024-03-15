@@ -2,7 +2,7 @@
 
 # LDA
 
-The [LDA][lda] CLI is local developer analytics tool. It provides:
+The **LDA** CLI is local developer analytics tool. It provides:
 
 - Tracking commands executed in user shell
 - Tracking processes running on users computer
