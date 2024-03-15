@@ -3,6 +3,7 @@ package main
 import (
 	"lda/cmd"
 	"lda/config"
+	"lda/database"
 	"lda/logging"
 	"os"
 )
@@ -27,6 +28,10 @@ func init() {
 
 	// setting up the home directory
 	config.SetupHomeDir()
+
+	// setup database and run migrations
+	database.Setup()
+	database.RunMigrations()
 }
 
 func main() {
