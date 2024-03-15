@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  lda:
+    container_name: ${COMPOSE_PROJECT_NAME}
+    build: .
+    environment:
+
+volumes:
+  db-data:

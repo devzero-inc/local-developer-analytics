@@ -1,0 +1,9 @@
+.idea/
+.DS_Store
+.env
+app.ini
+config.toml
+docs
+gen/*
+lda*
+.vscode
