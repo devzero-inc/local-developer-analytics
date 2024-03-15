@@ -2,12 +2,12 @@
 
 # LDA
 
-[![License]()]()
-[![Release]()]()
-[![CI]()]()
-[![Homebrew]()]()
+#[![License]()]()
+#[![Release]()]()
+#[![CI]()]()
+#[![Homebrew]()]()
 
-The [`lda`][lda] CLI is local developer analytics tool. It provides:
+The [LDA][lda] CLI is local developer analytics tool. It provides:
 
 - Tracking commands executed in user shell
 - Tracking processes running on users computer
@@ -43,11 +43,11 @@ lda --help
 
 After binary has been compiled we can install the service with the following commands:
 
-`lda install` => This will install the daemon, configure base directory, and inject configuration into the shell
-`lda start` => This will start the daemon
-`lda stop` => This will stop the daemon
-`lda uninstall` => This will uninstall the LDA and remove all configuration
-`lda serve` => This will serve the local dashbaord with data overview
+* `lda install` => This will install the daemon, configure base directory, and inject configuration into the shell
+* `lda start` => This will start the daemon
+* `lda stop` => This will stop the daemon
+* `lda uninstall` => This will uninstall the LDA and remove all configuration
+* `lda serve` => This will serve the local dashbaord with data overview
 
 ## Community
 
