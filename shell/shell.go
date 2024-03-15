@@ -16,6 +16,17 @@ import (
 const (
 	shellDir        = ".lda"
 	execPermissions = 0755
+
+	bourneSource = `
+# LDA shell source
+if [ -f "$HOME/.lda/lda.sh" ]; then
+    source "$HOME/.lda/lda.sh"
+fi`
+	fishSource = `
+# LDA shell source
+if test -f "$HOME/.lda/lda.sh"
+    source "$HOME/.lda/lda.sh"
+end`
 )
 
 // Embedding scripts directory
@@ -30,13 +41,16 @@ func InitShellConfiguration() {
 		logging.Log.Err(err).Msg("Failed to create shell configuration directory")
 	}
 
-	var filePath string
+	filePath := filepath.Join(dir, "lda.sh")
 	var shellScriptLocation string
 
 	switch config.Shell {
 	case config.Zsh:
-		filePath = filepath.Join(dir, "lda.sh")
 		shellScriptLocation = "scripts/zsh.sh"
+	case config.Bash:
+		shellScriptLocation = "scripts/bash.sh"
+	case config.Fish:
+		shellScriptLocation = "scripts/fish.sh"
 	default:
 		logging.Log.Error().Msg("Unsupported shell")
 		return
@@ -90,25 +104,26 @@ func InjectShellSource() {
 	logging.Log.Info().Msg("Installing shell source")
 
 	var shellConfigFile string
+	var source string
 
 	switch config.Shell {
 	case config.Zsh:
 		shellConfigFile = filepath.Join(config.HomeDir, ".zshrc")
-
+		source = bourneSource
+	case config.Bash:
+		shellConfigFile = filepath.Join(config.HomeDir, ".bashrc")
+		source = bourneSource
+	case config.Fish:
+		shellConfigFile = filepath.Join(config.HomeDir, ".config/fish/config.fish")
+		source = fishSource
 	default:
 		logging.Log.Error().Msg("Unsupported shell")
 		return
 	}
 
-	script := `
-# LDA shell source
-if [ -f "$HOME/.lda/lda.sh" ]; then
-    source "$HOME/.lda/lda.sh"
-fi`
-
 	// Check if the script is already present to avoid duplicates
-	if !isScriptPresent(shellConfigFile, script) {
-		if err := appendToFile(shellConfigFile, script); err != nil {
+	if !isScriptPresent(shellConfigFile, source) {
+		if err := appendToFile(shellConfigFile, source); err != nil {
 			return
 		}
 	}
