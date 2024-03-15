@@ -1,0 +1,13 @@
+[Unit]
+Description=Devzero.io LDA Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{.BinaryPath}} collect
+Restart=always
+StandardOutput=file:/tmp/devzero.io.lda.out.log
+StandardError=file:/tmp/devzero.io.lda.err.log
+
+[Install]
+WantedBy=multi-user.target
