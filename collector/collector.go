@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"encoding/json"
 	"lda/logging"
 	"net"
 	"os"
@@ -107,9 +108,18 @@ func collectSystemInformation(ctx context.Context) {
 					CPUUsage:       cpuPercent,
 					UsedMemory:     memorypercent,
 				}
+
 				InsertProcess(processInfo)
 				processInfos = append(processInfos, processInfo)
 			}
+
+			jsonData, err := json.MarshalIndent(processInfos, "", "    ")
+			if err != nil {
+				logging.Log.Err(err).Msg("Error marshalling data to JSON")
+				continue
+			}
+
+			logging.Log.Debug().Msg(string(jsonData))
 		}
 	}
 }
