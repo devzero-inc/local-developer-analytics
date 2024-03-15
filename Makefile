@@ -55,7 +55,7 @@ all: build debug
 
 ## Build binary
 build:
-	CGO_ENABLED=0 GOOS=$(UNAME) go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
+	CGO_ENABLED=1 GOOS=$(UNAME) go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
 
 ## Build and debug
 debug: build

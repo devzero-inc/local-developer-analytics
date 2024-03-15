@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
+	"lda/database"
 	"lda/logging"
 	"net"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -16,18 +17,64 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
-type ProcessInfo struct {
-	PID  int    `json:"pid"`
-	Name string `json:"name"`
+type Process struct {
+	Id   int    `json:"id" db:"id"`
+	PID  int    `json:"pid" db:"pid"`
+	Name string `json:"name" db:"name"`
 	// R: Running; S: Sleep; T: Stop; I: Idle; Z: Zombie; W: Wait; L: Lock;
-	Status         string  `json:"status"`
-	StartTime      string  `json:"startTime"`
-	ExecutionTime  string  `json:"executionTime"`
-	OS             string  `json:"os"`
-	Platform       string  `json:"platform"`
-	PlatformFamily string  `json:"platformFamily"`
-	CPUUsage       float64 `json:"cpuUsage"`
-	UsedMemory     float32 `json:"usedMemory"`
+	Status         string  `json:"status" db:"status"`
+	StartTime      string  `json:"startTime" db:"start_time"`
+	ExecutionTime  string  `json:"executionTime" db:"execution_time"`
+	OS             string  `json:"os" db:"os"`
+	Platform       string  `json:"platform" db:"platform"`
+	PlatformFamily string  `json:"platformFamily" db:"platform_family"`
+	CPUUsage       float64 `json:"cpuUsage" db:"cpu_usage"`
+	UsedMemory     float32 `json:"usedMemory" db:"used_memory"`
+}
+
+func GetAllProceses() {
+	var processes []Process
+	if err := database.DB.Select(&processes, "SELECT * FROM processes"); err != nil {
+		logging.Log.Err(err).Msg("Failed to get all processes")
+	}
+}
+
+func InsertProcess(process Process) {
+	query := `INSERT INTO processes (pid, name, status, start_time, execution_time, os, platform, platform_family, cpu_usage, used_memory)
+VALUES (:pid, :name, :status, :start_time, :execution_time, :os, :platform, :platform_family, :cpu_usage, :used_memory)`
+
+	_, err := database.DB.NamedExec(query, process)
+	if err != nil {
+		logging.Log.Err(err).Msg("Failed to insert process")
+	}
+}
+
+type Command struct {
+	Id            int    `json:"id" db:"id"`
+	PID           int    `json:"pid" db:"pid"`
+	Command       string `json:"command" db:"command"`
+	User          string `json:"user" db:"user"`
+	Directory     string `json:"directory" db:"directory"`
+	ExecutionTime string `json:"executionTime" db:"execution_time"`
+	StartTime     string `json:"startTime" db:"start_time"`
+	EndTime       string `json:"endTime" db:"end_time"`
+}
+
+func GetAllCommands() {
+	var commands []Command
+	if err := database.DB.Select(&commands, "SELECT * FROM commands"); err != nil {
+		logging.Log.Err(err).Msg("Failed to get all commands")
+	}
+}
+
+func InsertCommand(command Command) {
+	query := `INSERT INTO commands (command, user, directory, execution_time, start_time, end_time)
+VALUES (:command, :user, :directory, :execution_time, :start_time, :end_time)`
+
+	_, err := database.DB.NamedExec(query, command)
+	if err != nil {
+		logging.Log.Err(err).Msg("Failed to insert command")
+	}
 }
 
 var (
@@ -87,7 +134,7 @@ func collectSystemInformation(ctx context.Context) {
 				continue
 			}
 
-			var processInfos []ProcessInfo
+			var processInfos []Process
 			for _, p := range processes {
 				createTime, _ := p.CreateTime()
 				startTime := time.Unix(createTime/1000, 0)
@@ -112,7 +159,7 @@ func collectSystemInformation(ctx context.Context) {
 					continue
 				}
 
-				processInfo := ProcessInfo{
+				processInfo := Process{
 					PID:            int(p.Pid),
 					Name:           name,
 					Status:         status,
@@ -124,16 +171,17 @@ func collectSystemInformation(ctx context.Context) {
 					CPUUsage:       cpuPercent,
 					UsedMemory:     memorypercent,
 				}
+				InsertProcess(processInfo)
 				processInfos = append(processInfos, processInfo)
 			}
 
-			jsonData, err := json.MarshalIndent(processInfos, "", "    ")
-			if err != nil {
-				logging.Log.Err(err).Msg("Error marshalling data to JSON")
-				continue
-			}
+			//jsonData, err := json.MarshalIndent(processInfos, "", "    ")
+			//if err != nil {
+			//	logging.Log.Err(err).Msg("Error marshalling data to JSON")
+			//	continue
+			//}
 
-			logging.Log.Info().Msg(string(jsonData))
+			//logging.Log.Info().Msg(string(jsonData))
 		}
 	}
 }
@@ -169,7 +217,28 @@ func collectCommandInformation() error {
 				logging.Log.Error().Err(err).Msg("Error reading from socket")
 				return
 			}
-			logging.Log.Info().Msgf("Received: %s", string(buf[:n]))
+
+			data := string(buf[:n])
+			parts := strings.Split(data, "|")
+
+			if len(parts) != 6 {
+				logging.Log.Error().Msg("Invalid command format")
+			} else {
+				command := Command{
+					Command:       parts[0],
+					Directory:     parts[1],
+					User:          parts[2],
+					StartTime:     parts[3],
+					EndTime:       parts[4],
+					ExecutionTime: parts[5],
+				}
+
+				InsertCommand(command)
+
+				logging.Log.Info().Msgf("Received: %s", string(buf[:n]))
+
+			}
+
 		}(conn)
 	}
 }
