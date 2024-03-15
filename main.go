@@ -26,6 +26,9 @@ func init() {
 	// setting up the operating system
 	config.SetupOs()
 
+	// setting up the shell
+	config.SetupShell()
+
 	// setting up the home directory
 	config.SetupHomeDir()
 
