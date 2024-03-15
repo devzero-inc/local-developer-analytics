@@ -5,6 +5,7 @@ import (
 	"lda/logging"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -67,8 +68,11 @@ func collectSystemInformation(ctx context.Context) {
 			var processInfos []Process
 			for _, p := range processes {
 				createTime, _ := p.CreateTime()
-				startTime := time.Unix(createTime/1000, 0)
-				executionTime := time.Since(startTime).Round(time.Second)
+				// No need to convert to time.Time object if only calculating duration in ms
+				now := time.Now()
+				// Calculate executionTime directly in milliseconds as an int64
+				executionTimeMs := int64(now.UnixNano()/1e6) - createTime
+
 				name, _ := p.Name()
 
 				cpuPercent, err := p.CPUPercent()
@@ -89,12 +93,14 @@ func collectSystemInformation(ctx context.Context) {
 					continue
 				}
 
+				// Adjust the Process struct to accept ExecutionTime as int64 if not already
 				processInfo := Process{
 					PID:            int(p.Pid),
 					Name:           name,
 					Status:         status,
-					StartTime:      startTime.Format("2006-01-02 15:04:05"),
-					ExecutionTime:  executionTime.String(),
+					StartTime:      time.Unix(createTime/1000, (createTime%1000)*1e6).Format("2006-01-02 15:04:05"),
+					EndTime:        now.Format("2006-01-02 15:04:05"),
+					ExecutionTime:  executionTimeMs,
 					OS:             hostInfo.OS,
 					Platform:       hostInfo.Platform,
 					PlatformFamily: hostInfo.PlatformFamily,
@@ -146,18 +152,29 @@ func collectCommandInformation() error {
 
 			if len(parts) != 6 {
 				logging.Log.Error().Msg("Invalid command format")
-			} else {
-				command := Command{
-					Command:       parts[0],
-					Directory:     parts[1],
-					User:          parts[2],
-					StartTime:     parts[3],
-					EndTime:       parts[4],
-					ExecutionTime: parts[5],
-				}
-
-				InsertCommand(command)
+				return // Make sure to return after logging the error to prevent further execution
 			}
+
+			// Use strings.TrimSpace to remove any leading/trailing whitespace or newlines
+			executionTimeString := strings.TrimSpace(parts[5])
+
+			// Now convert the cleaned-up string to int64
+			executionTimeMs, err := strconv.ParseInt(executionTimeString, 10, 64)
+			if err != nil {
+				logging.Log.Error().Err(err).Msg("Invalid execution time format")
+				return
+			}
+
+			command := Command{
+				Command:       parts[0],
+				Directory:     parts[1],
+				User:          parts[2],
+				StartTime:     parts[3],
+				EndTime:       parts[4],
+				ExecutionTime: executionTimeMs, // Use the converted int64 value
+			}
+
+			InsertCommand(command)
 
 		}(conn)
 	}
