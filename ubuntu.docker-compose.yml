@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  lda:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.ubuntu
+    container_name: lda-ubuntu
+    restart: unless-stopped
+    volumes:
+      - ./:/app
+    working_dir: /app

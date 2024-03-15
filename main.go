@@ -32,6 +32,9 @@ func init() {
 	// setting up the home directory
 	config.SetupHomeDir()
 
+	// setting up the LDA directory
+	config.SetupLdaDir()
+
 	// setup database and run migrations
 	database.Setup()
 	database.RunMigrations()

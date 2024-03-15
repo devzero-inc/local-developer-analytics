@@ -34,14 +34,8 @@ end`
 var templateFS embed.FS
 
 func InitShellConfiguration() {
-	logging.Log.Info().Msg("Installing shell configuration")
 
-	dir := filepath.Join(config.HomeDir, shellDir)
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
-		logging.Log.Err(err).Msg("Failed to create shell configuration directory")
-	}
-
-	filePath := filepath.Join(dir, "lda.sh")
+	filePath := filepath.Join(config.LdaDir, "lda.sh")
 	var shellScriptLocation string
 
 	switch config.Shell {
@@ -56,7 +50,7 @@ func InitShellConfiguration() {
 		return
 	}
 
-	collectorFilePath := filepath.Join(dir, "collector.sh")
+	collectorFilePath := filepath.Join(config.LdaDir, "collector.sh")
 
 	cmdTmpl, err := template.ParseFS(templateFS, "scripts/collector.sh")
 	if err != nil {

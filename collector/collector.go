@@ -19,6 +19,8 @@ const SocketPath = "/tmp/lda.socket"
 
 func Collect() {
 
+	logging.Log.Info().Msg("Collecting command and system information")
+
 	// Create a context that listens for the interrupt signal
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -44,11 +46,13 @@ func Collect() {
 
 	// Wait for both functions to complete
 	wg.Wait()
+
+	logging.Log.Info().Msg("Collection stoped")
 }
 
 func collectSystemInformation(ctx context.Context) {
 
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop() // Ensure ticker is stopped to avoid leaks
 
 	for {
@@ -68,7 +72,6 @@ func collectSystemInformation(ctx context.Context) {
 			var processInfos []Process
 			for _, p := range processes {
 				createTime, _ := p.CreateTime()
-				// No need to convert to time.Time object if only calculating duration in ms
 				now := time.Now()
 				// Calculate executionTime directly in milliseconds as an int64
 				executionTimeMs := int64(now.UnixNano()/1e6) - createTime

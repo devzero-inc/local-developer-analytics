@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"lda/collector"
-	"lda/logging"
 
 	"github.com/spf13/cobra"
 )
@@ -18,9 +17,5 @@ var (
 )
 
 func collect(_ *cobra.Command, _ []string) {
-	logging.Log.Info().Msg("Collecting command and system information")
-
 	collector.Collect()
-
-	logging.Log.Info().Msg("Collection stoped")
 }
