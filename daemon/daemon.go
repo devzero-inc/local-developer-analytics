@@ -149,6 +149,18 @@ func StartDaemon() {
 	var cmd *exec.Cmd
 
 	if config.OS == config.Linux {
+
+		enable := exec.Command(
+			"systemctl",
+			"--user",
+			"enable",
+			DaemonServicedName)
+
+		if err := enable.Run(); err != nil {
+			logging.Log.Err(err).Msg("Failed to enable daemon service")
+			return
+		}
+
 		cmd = exec.Command(
 			"systemctl",
 			"--user",
