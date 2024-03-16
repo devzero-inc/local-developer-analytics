@@ -94,7 +94,7 @@ func lda(cmd *cobra.Command, _ []string) {
 }
 
 func start(_ *cobra.Command, _ []string) {
-	daemon.StartDeamon()
+	daemon.StartDaemon()
 }
 
 func stop(_ *cobra.Command, _ []string) {
