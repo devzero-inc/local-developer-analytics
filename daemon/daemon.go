@@ -142,7 +142,7 @@ func DestroyDaemonConfiguration() {
 	logging.Log.Info().Msg("Daemon service file removed successfully")
 }
 
-func StartDeamon() {
+func StartDaemon() {
 
 	logging.Log.Info().Msg("Starting daemon service")
 
