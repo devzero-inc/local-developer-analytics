@@ -3,6 +3,7 @@ package daemon
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"html/template"
 	"lda/config"
 	"lda/logging"
@@ -165,8 +166,11 @@ func StartDeamon() {
 			path)
 	}
 
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	if err := cmd.Run(); err != nil {
-		logging.Log.Err(err).Msg("Failed to start daemon service")
+		logging.Log.Err(err).Msg(fmt.Sprintf("Failed to start daemon service: %v", stderr.String()))
 		return
 	}
 
