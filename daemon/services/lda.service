@@ -10,4 +10,4 @@ StandardOutput=file:/tmp/devzero.io.lda.out.log
 StandardError=file:/tmp/devzero.io.lda.err.log
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
