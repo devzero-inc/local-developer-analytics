@@ -37,7 +37,7 @@ func InitDaemonConfiguration() {
 
 	if config.OS == config.Linux {
 
-		servicePath := DaemonServicedName
+		servicePath := filepath.Join(config.HomeDir, DaemonServicedFilePath)
 
 		if !checkLogindService() {
 
@@ -51,7 +51,6 @@ func InitDaemonConfiguration() {
 		}
 
 		filePath = filepath.Join(
-			config.HomeDir,
 			servicePath,
 			DaemonServicedName)
 		configLocation = "services/lda.service"
