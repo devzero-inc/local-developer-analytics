@@ -13,11 +13,12 @@ import (
 )
 
 const (
-	DaemonPlistFilePath    = "Library/LaunchAgents"
-	DaemonPlistName        = "lda.plist"
-	DaemonServicedFilePath = ".config/systemd/user"
-	DaemonServicedName     = "lda.service"
-	DaemonPermission       = 0644
+	DaemonPlistFilePath        = "Library/LaunchAgents"
+	DaemonPlistName            = "lda.plist"
+	DaemonServicedFilePath     = ".config/systemd/user"
+	DaemonRootServicedFilePath = "/etc/systemd/system"
+	DaemonServicedName         = "lda.service"
+	DaemonPermission           = 0644
 
 	dirPermission = 0755
 )
@@ -35,10 +36,24 @@ func InitDaemonConfiguration() {
 	var configLocation string
 
 	if config.OS == config.Linux {
+
+		serviceName := DaemonServicedName
+
+		if !checkLogindService() {
+
+			if !config.IsRoot {
+				logging.Log.Info().
+					Msg("You need to be root to install the daemon service, or enable logind service manually")
+				return
+			}
+
+			serviceName = DaemonRootServicedFilePath
+		}
+
 		filePath = filepath.Join(
 			config.HomeDir,
-			DaemonServicedFilePath,
-			DaemonServicedName)
+			serviceName,
+			serviceName)
 		configLocation = "services/lda.service"
 	} else if config.OS == config.MacOS {
 		filePath = filepath.Join(
@@ -142,30 +157,86 @@ func DestroyDaemonConfiguration() {
 	logging.Log.Info().Msg("Daemon service file removed successfully")
 }
 
+func checkLogindService() bool {
+	var stderr bytes.Buffer
+
+	checkLogind := exec.Command(
+		"systemctl",
+		"is-enabled",
+		"systemd-logind.service",
+	)
+	checkLogind.Stderr = &stderr
+
+	if err := checkLogind.Run(); err != nil {
+		logging.Log.Err(err).Msgf("Failed to check daemon service: %v", stderr.String())
+		return false
+	}
+
+	logindStatus := stderr.String()
+
+	if logindStatus == "masked" || logindStatus == "disabled" {
+		logging.Log.Info().
+			Msgf("Logind service is not available, and is currently in status: %v", stderr.String())
+		return false
+	}
+
+	return true
+}
+
 func StartDaemon() {
 
 	logging.Log.Info().Msg("Starting daemon service")
 
 	var cmd *exec.Cmd
+	var stderr bytes.Buffer
 
 	if config.OS == config.Linux {
 
-		enable := exec.Command(
-			"systemctl",
-			"--user",
-			"enable",
-			DaemonServicedName)
+		var enableCmd *exec.Cmd
 
-		if err := enable.Run(); err != nil {
-			logging.Log.Err(err).Msg("Failed to enable daemon service")
+		if !checkLogindService() {
+			logging.Log.Info().
+				Msgf("Logind service is not available, and is currently in status: %v", stderr.String())
+
+			if !config.IsRoot {
+				logging.Log.Info().
+					Msg("You need to be root to enable the daemon service, or enable logind service manually")
+				return
+			}
+
+			enableCmd = exec.Command(
+				"systemctl",
+				"enable",
+				DaemonServicedName)
+
+			enableCmd.Stderr = &stderr
+
+			cmd = exec.Command(
+				"systemctl",
+				"start",
+				DaemonServicedName)
+
+		} else {
+			enableCmd = exec.Command(
+				"systemctl",
+				"--user",
+				"enable",
+				DaemonServicedName)
+
+			enableCmd.Stderr = &stderr
+
+			cmd = exec.Command(
+				"systemctl",
+				"--user",
+				"start",
+				DaemonServicedName)
+		}
+
+		if err := enableCmd.Run(); err != nil {
+			logging.Log.Err(err).Msgf("Failed to enable daemon service: %v", stderr.String())
 			return
 		}
 
-		cmd = exec.Command(
-			"systemctl",
-			"--user",
-			"start",
-			DaemonServicedName)
 	} else if config.OS == config.MacOS {
 		path := filepath.Join(
 			config.HomeDir,
@@ -178,7 +249,6 @@ func StartDaemon() {
 			path)
 	}
 
-	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {

@@ -1,0 +1,11 @@
+version: '3'
+services:
+  lda:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.ubuntu-22
+    tmpfs:
+    - /run
+    - /run/lock
+    volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup:ro

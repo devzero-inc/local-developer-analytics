@@ -32,6 +32,8 @@ var (
 	HomeDir string
 	// LdaDir is the directory.
 	LdaDir string
+	// IsRoot is a value to check if the user is root
+	IsRoot bool
 )
 
 // SetupOs determine the operating system
@@ -85,6 +87,7 @@ func SetupHomeDir() {
 	HomeDir = home
 }
 
+// SetupLdaDir sets the directory for the shell configuration
 func SetupLdaDir() {
 
 	dir := filepath.Join(HomeDir, ".lda")
@@ -93,4 +96,9 @@ func SetupLdaDir() {
 	}
 
 	LdaDir = dir
+}
+
+// SetupUserConfig sets the user permission level (root or not)
+func SetupUserConfig() {
+	IsRoot = os.Geteuid() == 0
 }
