@@ -3,6 +3,7 @@ Description=Devzero.io LDA Service
 After=network.target
 
 [Service]
+Environment="SHELL={{.Shell}}"
 Type=simple
 ExecStart={{.BinaryPath}} collect
 Restart=always
