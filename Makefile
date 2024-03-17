@@ -61,6 +61,10 @@ build:
 install:
 	CGO_ENABLED=1 GOOS=$(UNAME) go install -a -tags netgo -ldflags="$(LDFLAGS)"
 
+## Install binary to /usr/local/bin
+install-global: install
+	@sudo cp ${GOPATH}/bin/$(TARGET) /usr/local/bin/$(TARGET)
+
 ## Build and debug
 debug: build
 	./$(TARGET)
