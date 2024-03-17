@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"lda/daemon"
 	"lda/logging"
 	"lda/resources"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -55,7 +57,7 @@ var (
 		Use:   "serve",
 		Short: "Serve local client",
 		Long:  `Serve local frontend client for LDA Project.`,
-		Run:   serve,
+		RunE:  serve,
 	}
 )
 
@@ -114,10 +116,19 @@ func uninstall(_ *cobra.Command, _ []string) {
 	daemon.DestroyDaemonConfiguration()
 }
 
-func serve(_ *cobra.Command, _ []string) {
-	logging.Log.Info().Msg("Serving local frontend client on http://localhost:8080")
+func serve(_ *cobra.Command, args []string) error {
+	port := "8080"
+	if len(args) > 0 {
+		port = args[0]
+	}
+
+	logging.Log.Info().Msgf("Serving local frontend client on http://localhost:%v", port)
 
 	resources.Serve()
 
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
+	if err != nil {
+		return errors.Wrap(err, "pass a port when calling serve; example: `lda serve 8987`")
+	}
+	return nil
 }
