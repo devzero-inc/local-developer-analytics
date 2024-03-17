@@ -167,14 +167,11 @@ func checkLogindService() bool {
 	)
 	checkLogind.Stderr = &stderr
 
-	if err := checkLogind.Run(); err != nil {
-		logging.Log.Err(err).Msgf("Failed to check daemon service: %v", stderr.String())
-		return false
-	}
+	err := checkLogind.Run()
 
 	logindStatus := stderr.String()
 
-	if logindStatus == "masked" || logindStatus == "disabled" {
+	if err != nil || logindStatus == "masked" || logindStatus == "disabled" {
 		logging.Log.Info().
 			Msgf("Logind service is not available, and is currently in status: %v", stderr.String())
 		return false
