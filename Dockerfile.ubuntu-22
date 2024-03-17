@@ -1,0 +1,41 @@
+## Use an official Ubuntu base image
+#FROM ubuntu:latest
+#
+## Avoid prompts from apt
+#ENV DEBIAN_FRONTEND=noninteractive
+#
+#RUN apt-get update && \
+#    apt-get install -y git vim bash zsh fish golang make systemd-container && \
+#    apt-get clean && \
+#    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#
+## Set the SHELL environment variable
+#ENV SHELL=/bin/bash
+#
+## Set the working directory in the container
+#WORKDIR /app
+#
+#COPY . .
+#
+## Keep the container running
+#CMD ["tail", "-f", "/dev/null"]
+
+#FROM ubuntu:latest
+#ENV DEBIAN_FRONTEND=noninteractive
+#RUN apt-get update && apt-get install -y systemd systemd-sysv && apt-get clean
+#
+#CMD ["/lib/systemd/systemd"]
+
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y systemd git vim bash zsh fish golang make
+
+# Set the SHELL environment variable
+ENV SHELL=/bin/bash
+
+# Set the working directory in the container
+WORKDIR /app
+
+COPY . .
+
+CMD ["/lib/systemd/systemd"]

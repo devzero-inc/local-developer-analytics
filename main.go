@@ -35,6 +35,9 @@ func init() {
 	// setting up the LDA directory
 	config.SetupLdaDir()
 
+	// setting up the user permission level
+	config.SetupUserConfig()
+
 	// setup database and run migrations
 	database.Setup()
 	database.RunMigrations()
