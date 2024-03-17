@@ -1,0 +1,21 @@
+dev:
+  commands:
+    - command: go mod download
+      directory: .
+      name: install_cmd_0
+  name: ''
+  packages:
+    - dz.docker
+    - nixpkgs.go
+  repos:
+    - https://github.com/devzero-inc/local-developer-analytics/
+compute:
+  compute_name: default
+  os_family: UBUNTU_22_04
+  region: us-west-1
+  resources:
+    cpus: 4+
+    disk: 50
+network:
+  category: container
+  network_name: default
