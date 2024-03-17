@@ -92,6 +92,7 @@ func InitDaemonConfiguration() {
 	if err := shellTempl.Execute(&content, map[string]interface{}{
 		"BinaryPath": exePath,
 		"Shell":      os.Getenv("SHELL"),
+		"Home":       config.HomeDir,
 	}); err != nil {
 		logging.Log.Err(err).Msg("Failed to execute daemon template")
 		return
