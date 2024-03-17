@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 Environment="SHELL={{.Shell}}"
+Environment="HOME={{.Home}}"
 Type=simple
 ExecStart={{.BinaryPath}} collect
 Restart=always
