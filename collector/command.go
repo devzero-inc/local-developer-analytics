@@ -27,10 +27,22 @@ func GetAllCommands() []Command {
 	return commands
 }
 
+func GetCommandById(id int64) Command {
+	var command Command
+	query := `SELECT * FROM commands WHERE id = ?`
+
+	err := database.DB.Get(&command, query, id)
+	if err != nil {
+		logging.Log.Err(err).Msg("Failed to get command by id")
+	}
+
+	return command
+}
+
 func GetAllCommandsForPeriod(start int64, end int64) []Command {
 	var commands []Command
 
-	query := `SELECT category, SUM(execution_time) AS execution_time 
+	query := `SELECT id, category, SUM(execution_time) AS execution_time 
               FROM commands 
               WHERE start_time >= ? AND start_time <= ? 
               GROUP BY category 
@@ -47,7 +59,7 @@ func GetAllCommandsForPeriod(start int64, end int64) []Command {
 func GetAllCommandsForCategoryForPeriod(category string, start int64, end int64) []Command {
 	var commands []Command
 
-	query := `SELECT category, command, SUM(execution_time) AS execution_time 
+	query := `SELECT id, category, command, SUM(execution_time) AS execution_time 
               FROM commands 
               WHERE category = ? AND start_time >= ? AND start_time <= ? 
               GROUP BY command 

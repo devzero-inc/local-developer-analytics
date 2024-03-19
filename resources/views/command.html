@@ -34,6 +34,18 @@
     (async function() {
       const chartData = JSON.parse(`{{.ChartJSON}}`);
 
+      chartData.options.onClick = function(event, elements) {
+        // 'elements' is an array of elements that are at the click position.
+        if (elements.length > 0) {
+          const firstElement = elements[0];
+          const index = firstElement.index;
+
+          console.log(chartData);
+          const commandInfo = chartData.data.ids[index];
+
+          window.location.href = `/overview?id=${commandInfo}`;
+        }
+      }
       if (chartData != null) {
         new Chart(document.getElementById('commandsExecutionTime'), chartData);
       }

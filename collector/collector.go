@@ -52,7 +52,7 @@ func Collect() {
 
 func collectSystemInformation(ctx context.Context) {
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop() // Ensure ticker is stopped to avoid leaks
 
 	for {
