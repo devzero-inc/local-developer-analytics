@@ -6,6 +6,7 @@ import (
 	"lda/collector"
 	"lda/logging"
 	"net/http"
+	"strconv"
 	"text/template"
 	"time"
 )
@@ -14,6 +15,11 @@ import (
 //go:embed views/*
 var templateFS embed.FS
 
+type CommandLabelId struct {
+	Label string `json:"label"`
+	Id    int    `json:"id"`
+}
+
 type ChartConfig struct {
 	Type    string       `json:"type"`
 	Data    ChartData    `json:"data"`
@@ -21,6 +27,7 @@ type ChartConfig struct {
 }
 
 type ChartData struct {
+	Ids      []int           `json:"ids"`
 	Labels   []string        `json:"labels"`
 	Datasets []ChartDataSets `json:"datasets"`
 }
@@ -171,10 +178,12 @@ func Serve() {
 			label, startMillis, endMillis)
 
 		var labels []string
+		var ids []int
 		var dataPoints []int64
 
 		for _, cmd := range commands {
 			labels = append(labels, cmd.Command)
+			ids = append(ids, cmd.Id)
 			dataPoints = append(dataPoints, cmd.ExecutionTime)
 		}
 
@@ -185,6 +194,7 @@ func Serve() {
 		}
 
 		chartData := ChartData{
+			Ids:      ids,
 			Labels:   labels,
 			Datasets: []ChartDataSets{chartDataSets},
 		}
@@ -225,6 +235,55 @@ func Serve() {
 			"ChartJSON": string(chartJSON),
 			"StartTime": start,
 			"EndTime":   end,
+		})
+
+	})
+
+	http.HandleFunc("/overview", func(w http.ResponseWriter, r *http.Request) {
+
+		queryParams := r.URL.Query()
+
+		label := queryParams.Get("id")
+
+		if label == "" {
+			http.Error(w, "Pull parameter is required", http.StatusBadRequest)
+		}
+
+		i, err := strconv.ParseInt(label, 10, 64)
+		if err != nil {
+			http.Error(w, "Failed to parse id", http.StatusBadRequest)
+		}
+
+		command := collector.GetCommandById(i)
+
+		processes := collector.GetAllProcessesForPeriod(command.StartTime, command.EndTime)
+
+		timeProcesses, err := collector.GetTopProcessesAndMetrics(command.StartTime, command.EndTime)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		processesJSON, err := json.Marshal(processes)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		timeProcessesJSON, err := json.Marshal(timeProcesses)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl, err := template.ParseFS(templateFS, "views/overview.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl.Execute(w, map[string]interface{}{
+			"ProcessesJSON":     string(processesJSON),
+			"TimeProcessesJSON": string(timeProcessesJSON),
 		})
 
 	})
