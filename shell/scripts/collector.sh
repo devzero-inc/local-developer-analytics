@@ -2,18 +2,22 @@
 # POSIX-compliant script to log command details to a Unix socket
 
 # Parameters:
-# $1 - Command to log
-# $2 - Working directory
-# $3 - User who executed the command
-# $4 - Timestamp of command execution (start time, Unix timestamp)
-# $5 - End time of command execution (Unix timestamp)
-# $6 - Duration of command execution in seconds
+# $1 - Execution phase (start/end)
+# $2 - Command to log
+# $3 - Working directory
+# $4 - User who executed the command
+# $5 - Timestamp of command execution (start time, Unix timestamp)
+# For end: $6 - End time, $7 - Duration
 
 # UNIX socket path
 SOCKET_PATH="{{.SocketPath}}"
 
 # Construct the log message with start time, end time, and duration
-LOG_MESSAGE="$1|$2|$3|$4|$5|$6"
+if [ "$1" = "start" ]; then
+    LOG_MESSAGE="start|$2|$3|$4|$5"
+elif [ "$1" = "end" ]; then
+    LOG_MESSAGE="end|$2|$3|$4|$5|$6|$7"
+fi
 
 # Function to check command existence
 command_exists() {
@@ -47,6 +51,7 @@ elif command_exists python; then
 elif command_exists perl; then
     send_via_perl
 else
+    # TODO: Implement direct command sending
     echo "Neither nc, socat, python or perl are available on this system."
     exit 1
 fi
