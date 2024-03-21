@@ -215,6 +215,11 @@ func collectCommandInformation() error {
 					return // Make sure to return after logging the error to prevent further execution
 				}
 
+				if !IsCommandAcceptable(parts[1]) {
+					logging.Log.Debug().Msg("Command is not acceptable")
+					return
+				}
+
 				// Use strings.TrimSpace to remove any leading/trailing whitespace or newlines
 				startTimeString := strings.TrimSpace(parts[4])
 
@@ -245,6 +250,11 @@ func collectCommandInformation() error {
 				if len(parts) != 7 {
 					logging.Log.Error().Msg("Invalid command format")
 					return // Make sure to return after logging the error to prevent further execution
+				}
+
+				if !IsCommandAcceptable(parts[1]) {
+					logging.Log.Debug().Msg("Command is not acceptable")
+					return
 				}
 
 				// Use strings.TrimSpace to remove any leading/trailing whitespace or newlines

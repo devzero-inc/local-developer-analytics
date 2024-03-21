@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"lda/config"
 	"lda/database"
 	"lda/logging"
 	"regexp"
@@ -108,4 +109,15 @@ func ParseCommand(command string) string {
 	}
 
 	return command
+}
+
+func IsCommandAcceptable(command string) bool {
+
+	if config.AppConfig.ExcludeRegex != "" {
+		logging.Log.Debug().Msgf("Checking if command is acceptable: %s", command)
+		var pattern = regexp.MustCompile(config.AppConfig.ExcludeRegex)
+		return !pattern.MatchString(command)
+	}
+
+	return true
 }

@@ -20,7 +20,7 @@ func init() {
 	// setting up the Logger
 	logging.Setup(
 		os.Stdout,
-		false,
+		true,
 	)
 
 	// setting up the operating system
@@ -37,6 +37,9 @@ func init() {
 
 	// setting up the user permission level
 	config.SetupUserConfig()
+
+	// setting up optional application configuration
+	config.SetupConfig()
 
 	// setup database and run migrations
 	database.Setup()
