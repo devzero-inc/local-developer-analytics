@@ -111,10 +111,12 @@ func ParseCommand(command string) string {
 	return command
 }
 
+// IsCommandAcceptable checks if a command string matches a configured regex pattern.
+// Commands that match the regex are considered unacceptable, and it returns false.
+// If the regex is empty or the command does not match, it returns true.
 func IsCommandAcceptable(command string) bool {
-
 	if config.AppConfig.ExcludeRegex != "" {
-		logging.Log.Debug().Msgf("Checking if command is acceptable: %s", command)
+		logging.Log.Debug().Msgf("Checking if command %s is acceptable for regex: %s", command, config.AppConfig.ExcludeRegex)
 		var pattern = regexp.MustCompile(config.AppConfig.ExcludeRegex)
 		return !pattern.MatchString(command)
 	}
