@@ -21,7 +21,7 @@ var (
 		Use:   "lda",
 		Short: "Command line manager for LDA project.",
 		Long: `Command line manager for LDA Project.
-        Complete documentation is available at http://devzero.io`,
+        Complete documentation is available at https://devzero.io`,
 		Run: lda,
 	}
 
@@ -64,6 +64,7 @@ var (
 func init() {
 
 	includeShowFlagsForLda(ldaCmd)
+	includeShowFlagsForServe(serveCmd)
 
 	cobra.OnInitialize(initLogging)
 
@@ -80,10 +81,15 @@ func includeShowFlagsForLda(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Verbosity")
 }
 
+func includeShowFlagsForServe(cmd *cobra.Command) {
+	cmd.Flags().StringP("port", "p", "8080", "Port to serve the frontend client")
+}
+
 func initLogging() {
 	logging.Setup(os.Stdout, Verbose)
 }
 
+// Execute is the entry point for the command line
 func Execute() {
 	if err := ldaCmd.Execute(); err != nil {
 		logging.Log.Fatal().Err(err).Msg("Failed to execute main lda command")
@@ -92,43 +98,62 @@ func Execute() {
 }
 
 func lda(cmd *cobra.Command, _ []string) {
-	cmd.Help()
+	if err := cmd.Help(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to show help")
+	}
 }
 
 func start(_ *cobra.Command, _ []string) {
-	daemon.StartDaemon()
+	if err := daemon.StartDaemon(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to start daemon")
+	}
 }
 
 func stop(_ *cobra.Command, _ []string) {
-	daemon.StopDaemon()
+	if err := daemon.StopDaemon(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to stop daemon")
+	}
 }
 
 func install(_ *cobra.Command, _ []string) {
+	if err := daemon.InstallDaemonConfiguration(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to install daemon configuration")
+	}
 
-	shell.InitShellConfiguration()
+	if err := shell.InstallShellConfiguration(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to install shell configuration")
+	}
 
-	daemon.InitDaemonConfiguration()
-
-	shell.InjectShellSource()
+	if err := shell.InjectShellSource(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to inject shell source")
+	}
 }
 
 func uninstall(_ *cobra.Command, _ []string) {
-	daemon.DestroyDaemonConfiguration()
-}
-
-func serve(_ *cobra.Command, args []string) error {
-	port := "8080"
-	if len(args) > 0 {
-		port = args[0]
+	if err := daemon.DestroyDaemonConfiguration(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to uninstall daemon configuration")
 	}
 
-	logging.Log.Info().Msgf("Serving local frontend client on http://localhost:%v", port)
+	if err := shell.DeleteShellConfiguration(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to delete shell configuration")
+	}
+
+	logging.Log.Info().Msg(`
+		Daemon service files and shell configuration deleted successfully, 
+		~/.lda directory still holds database file, and your rc file stills has source script.
+		If you wish to remove those, delete them manually`)
+}
+
+func serve(cmd *cobra.Command, _ []string) error {
+	portFlag := cmd.Flag("port").Value
+
+	logging.Log.Info().Msgf("Serving local frontend client on http://localhost:%v", portFlag)
 
 	resources.Serve()
 
-	err := http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%v", portFlag), nil)
 	if err != nil {
-		return errors.Wrap(err, "pass a port when calling serve; example: `lda serve 8987`")
+		return errors.Wrap(err, "pass a port when calling serve; example: `lda serve -p 8987`")
 	}
 	return nil
 }

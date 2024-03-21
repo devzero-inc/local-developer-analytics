@@ -2,10 +2,10 @@ package collector
 
 import (
 	"context"
+	"fmt"
 	"lda/logging"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -19,7 +19,7 @@ const SocketPath = "/tmp/lda.socket"
 
 var (
 	// Map to store ongoing commands
-	ongoingCommands = make(map[int64]Command)
+	ongoingCommands = make(map[string]Command)
 	// Mutex to protect access to counter and conditionally starting/stopping collection
 	collectionMutex sync.Mutex
 	// Counter to track active commands
@@ -31,8 +31,8 @@ var (
 	isCollectionRunning bool = false
 )
 
+// Collect starts the collection of command and system information
 func Collect() {
-
 	logging.Log.Info().Msg("Collecting command and system information")
 
 	// Create a context that listens for the interrupt signal
@@ -45,7 +45,7 @@ func Collect() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		collectSystemInformation(ctx, 120*time.Second)
+		collectSystemInformation(ctx, 120*time.Second, 0)
 	}()
 
 	// Start collectCommandInformation in its own goroutine
@@ -54,38 +54,42 @@ func Collect() {
 		defer wg.Done()
 		if err := collectCommandInformation(); err != nil {
 			logging.Log.Error().Err(err).Msg("Failed to collect command information")
-			cancel() // Optionally cancel the context if there's an error
+			cancel()
 		}
 	}()
 
 	// Wait for both functions to complete
 	wg.Wait()
 
-	logging.Log.Info().Msg("Collection stoped")
+	logging.Log.Info().Msg("Collection stopped")
 }
 
-func collectSystemInformation(ctx context.Context, tickerDuration time.Duration) {
-	logging.Log.Debug().Msgf("Collecting system information every %s", tickerDuration)
+func collectSystemInformation(ctx context.Context, initialDuration, increaseDuration time.Duration) {
+	// Perform initial collection
+	if err := collectOnce(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to collect system information")
+	}
 
-	// Perform initial collection before starting the ticker
-	collectOnce()
-
-	ticker := time.NewTicker(tickerDuration)
-	defer ticker.Stop() // Ensure ticker is stopped to avoid leaks
+	currentDuration := initialDuration
 
 	for {
 		select {
 		case <-ctx.Done():
 			logging.Log.Info().Msg("Shutting down collection of system information")
 			return
-		case <-ticker.C:
+		case <-time.After(currentDuration):
 			// Perform the collection on each tick
-			collectOnce()
+			if err := collectOnce(); err != nil {
+				logging.Log.Error().Err(err).Msg("Failed to collect system information")
+			}
+			// Increase the duration for the next tick
+			currentDuration += increaseDuration
+			logging.Log.Debug().Msgf("Next collection in %s", currentDuration)
 		}
 	}
 }
 
-func collectOnce() {
+func collectOnce() error {
 
 	logging.Log.Debug().Msg("Collecting process")
 
@@ -94,17 +98,22 @@ func collectOnce() {
 	processes, err := process.Processes()
 	if err != nil {
 		logging.Log.Err(err).Msg("Error retrieving processes")
-		return
+		return err
 	}
 
 	var processInfos []Process
 	for _, p := range processes {
-		createTime, _ := p.CreateTime()
-		now := time.Now()
-		// Calculate executionTime directly in milliseconds as an int64
-		executionTimeMs := int64(now.UnixNano()/1e6) - createTime
+		createTime, err := p.CreateTime()
+		if err != nil {
+			logging.Log.Err(err).Msg("Error retrieving create time")
+			continue
+		}
 
-		name, _ := p.Name()
+		name, err := p.Name()
+		if err != nil {
+			logging.Log.Err(err).Msg("Error retrieving name")
+			continue
+		}
 
 		cpuPercent, err := p.CPUPercent()
 		if err != nil {
@@ -129,19 +138,20 @@ func collectOnce() {
 			PID:            int(p.Pid),
 			Name:           name,
 			Status:         status,
-			StartTime:      createTime,
-			EndTime:        now.UnixMilli(),
-			ExecutionTime:  executionTimeMs,
+			CreatedTime:    createTime,
+			StoredTime:     time.Now().UnixMilli(),
 			OS:             hostInfo.OS,
 			Platform:       hostInfo.Platform,
 			PlatformFamily: hostInfo.PlatformFamily,
 			CPUUsage:       cpuPercent,
-			UsedMemory:     memorypercent,
+			MemoryUsage:    memorypercent,
 		}
 
 		InsertProcess(processInfo)
 		processInfos = append(processInfos, processInfo)
 	}
+
+	return nil
 }
 
 func onStartCommand() {
@@ -154,7 +164,7 @@ func onStartCommand() {
 		logging.Log.Debug().Msg("Starting collection")
 		var timeoutDuration = 10 * time.Minute
 		collectionContext, collectionCancelFunc = context.WithTimeout(context.Background(), timeoutDuration)
-		go collectSystemInformation(collectionContext, 1*time.Second)
+		go collectSystemInformation(collectionContext, 1*time.Second, 5)
 		isCollectionRunning = true
 	}
 }
@@ -185,7 +195,6 @@ func collectCommandInformation() error {
 	}
 	defer listener.Close()
 
-	logging.Log.Info().Msg("Listening on " + SocketPath)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -194,111 +203,95 @@ func collectCommandInformation() error {
 		}
 
 		// Handle each connection in a separate goroutine
-		go func(c net.Conn) {
-			defer c.Close()
-			var buf [1024]byte
-			n, err := c.Read(buf[:])
-			if err != nil {
-				logging.Log.Error().Err(err).Msg("Error reading from socket")
-				return
+		go func() {
+			if err := handleSocketCollection(conn); err != nil {
+				logging.Log.Error().Err(err).Msg("Error handling socket collection")
 			}
-
-			data := string(buf[:n])
-			parts := strings.Split(data, "|")
-
-			logging.Log.Debug().Msgf("Received: %s", string(buf[:n]))
-
-			if parts[0] == "start" {
-
-				if len(parts) != 5 {
-					logging.Log.Error().Msg("Invalid command format")
-					return // Make sure to return after logging the error to prevent further execution
-				}
-
-				if !IsCommandAcceptable(parts[1]) {
-					logging.Log.Debug().Msg("Command is not acceptable")
-					return
-				}
-
-				// Use strings.TrimSpace to remove any leading/trailing whitespace or newlines
-				startTimeString := strings.TrimSpace(parts[4])
-
-				startTimeTimestamp, err := strconv.ParseInt(startTimeString, 10, 64)
-				if err != nil {
-					logging.Log.Error().Err(err).Msg("Invalid start time format")
-					return
-				}
-
-				logging.Log.Debug().Msgf("Parsing command: %s", parts[0])
-
-				command := Command{
-					Category:  ParseCommand(parts[1]),
-					Command:   parts[1],
-					Directory: parts[2],
-					User:      parts[3],
-					StartTime: startTimeTimestamp,
-				}
-
-				ongoingCommands[command.StartTime] = command
-
-				// Call onStartCommand to increment the activeCommandsCounter and start the collection if necessary
-				onStartCommand()
-
-				//InsertCommand(command)
-			} else if parts[0] == "end" {
-
-				if len(parts) != 7 {
-					logging.Log.Error().Msg("Invalid command format")
-					return // Make sure to return after logging the error to prevent further execution
-				}
-
-				if !IsCommandAcceptable(parts[1]) {
-					logging.Log.Debug().Msg("Command is not acceptable")
-					return
-				}
-
-				// Use strings.TrimSpace to remove any leading/trailing whitespace or newlines
-				executionTimeString := strings.TrimSpace(parts[6])
-				startTimeString := strings.TrimSpace(parts[4])
-				endTimeString := strings.TrimSpace(parts[5])
-
-				executionTimeMs, err := strconv.ParseInt(executionTimeString, 10, 64)
-				if err != nil {
-					logging.Log.Error().Err(err).Msg("Invalid execution time format")
-					return
-				}
-
-				startTimeTimestamp, err := strconv.ParseInt(startTimeString, 10, 64)
-				if err != nil {
-					logging.Log.Error().Err(err).Msg("Invalid start time format")
-					return
-				}
-
-				endTimeTimestamp, err := strconv.ParseInt(endTimeString, 10, 64)
-				if err != nil {
-					logging.Log.Error().Err(err).Msg("Invalid end time format")
-					return
-				}
-
-				logging.Log.Debug().Msgf("Parsing command: %s", parts[0])
-
-				if command, exists := ongoingCommands[startTimeTimestamp]; exists {
-					command.EndTime = endTimeTimestamp
-					command.ExecutionTime = executionTimeMs
-
-					InsertCommand(command)
-
-					delete(ongoingCommands, startTimeTimestamp)
-					onEndCommand()
-				} else {
-					logging.Log.Error().Msg("Matching start command not found")
-					return
-				}
-
-			} else {
-				logging.Log.Error().Msg("Invalid command format")
-				return // Make sure to return after logging the error to prevent further execution
-			}
-		}(conn)
+		}()
 	}
+}
+
+func handleSocketCollection(c net.Conn) error {
+	defer c.Close()
+	var buf [1024]byte
+	n, err := c.Read(buf[:])
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Error reading from socket")
+		return err
+	}
+
+	data := string(buf[:n])
+	parts := strings.Split(data, "|")
+
+	logging.Log.Debug().Msgf("Received: %s", string(buf[:n]))
+
+	if len(parts) != 5 {
+		logging.Log.Error().Msg("Invalid command format")
+		return fmt.Errorf("invalid command format")
+	}
+
+	if parts[0] == "start" {
+		if err := handleStartCommand(parts); err != nil {
+			logging.Log.Error().Err(err).Msg("Error handling start command")
+		}
+	} else if parts[0] == "end" {
+		if err := handleEndCommand(parts); err != nil {
+			logging.Log.Error().Err(err).Msg("Error handling end command")
+		}
+	} else {
+		logging.Log.Error().Msg("Invalid command format")
+		return err
+	}
+
+	return nil
+}
+
+func handleStartCommand(parts []string) error {
+	if !IsCommandAcceptable(parts[1]) {
+		logging.Log.Debug().Msg("Command is not acceptable")
+		return fmt.Errorf("command is not acceptable")
+	}
+
+	logging.Log.Debug().Msgf("Parsing command: %s", parts[0])
+
+	command := Command{
+		Category:  ParseCommand(parts[1]),
+		Command:   parts[1],
+		Directory: parts[2],
+		User:      parts[3],
+		StartTime: time.Now().UnixMilli(),
+	}
+
+	ongoingCommands[parts[4]] = command
+
+	onStartCommand()
+
+	return nil
+}
+
+func handleEndCommand(parts []string) error {
+
+	if !IsCommandAcceptable(parts[1]) {
+		logging.Log.Debug().Msg("Command is not acceptable")
+		return fmt.Errorf("command is not acceptable")
+	}
+
+	logging.Log.Debug().Msgf("Parsing command: %s", parts[0])
+
+	if command, exists := ongoingCommands[parts[4]]; exists {
+		command.EndTime = time.Now().UnixMilli()
+		command.ExecutionTime = command.EndTime - command.StartTime
+
+		if err := InsertCommand(command); err != nil {
+			logging.Log.Error().Err(err).Msg("Failed to insert command")
+			return err
+		}
+		delete(ongoingCommands, parts[4])
+		onEndCommand()
+	} else {
+		logging.Log.Error().Msg("Matching start command not found")
+		return fmt.Errorf("matching start command not found")
+	}
+
+	return nil
 }

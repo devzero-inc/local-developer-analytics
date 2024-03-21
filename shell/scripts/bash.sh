@@ -1,24 +1,25 @@
-# Use gdate on macOS (GNU coreutils), date on Linux
-DATE_CMD="date"
-if command -v gdate > /dev/null; then
-    DATE_CMD="gdate"
-fi
+generate_uuid() {
+    echo "$(date +%s)-$$-$RANDOM" | shasum | cut -d " " -f1
+}
 
-# Mimic preexec functionality using DEBUG trap
 preexec_invoke_exec() {
-    if [[ "$BASH_COMMAND" != "precmd_invoke_cmd" && "$BASH_COMMAND" != "$PROMPT_COMMAND" ]]; then
-        # Save the start time and the command only if it's not the precmd function
-        export COMMAND_START_TIME=$($DATE_CMD +%s%3N)
+# Mimic preexec functionality using DEBUG trap
+    # Avoid running preexec_invoke_exec for PROMPT_COMMAND
+    if [[ "$BASH_COMMAND" != "$PROMPT_COMMAND" ]]; then
+        export UUID=$(generate_uuid)
         export LAST_COMMAND="$BASH_COMMAND"
+        # Send a start execution message
+        {{.CommandScriptPath}} "start" "$LAST_COMMAND" "$PWD" "$USER" "$UUID"
     fi
 }
 trap 'preexec_invoke_exec' DEBUG
 
 # Mimic precmd functionality using PROMPT_COMMAND
 precmd_invoke_cmd() {
-    local end_time=$($DATE_CMD +%s%3N)
-    local duration=$((end_time - COMMAND_START_TIME))
-    {{.CommandScriptPath}} "$LAST_COMMAND" "$PWD" "$USER" "$COMMAND_START_TIME" "$end_time" "$duration"
+    # Send an end execution message
+    {{.CommandScriptPath}} "end" "$LAST_COMMAND" "$PWD" "$USER" "$UUID"
 }
 
-PROMPT_COMMAND="precmd_invoke_cmd"
+# Update PROMPT_COMMAND to invoke precmd_invoke_cmd
+# Append precmd_invoke_cmd to existing PROMPT_COMMAND to preserve other functionalities
+PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }precmd_invoke_cmd"

@@ -1,54 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8">
     <title>Command Execution Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
-  </head>
-  <body class="p-5">
-    <div class="flex justify-end">
-      <form action="/" method="get" class="mb-4">
+</head>
+<body class="p-5">
+<div class="flex justify-end">
+    <form action="/" method="get" class="mb-4">
         <div class="flex flex-wrap -mx-3 mb-6">
-          <div class="px-3 mb-6 md:mb-0">
-            <label for="start" class="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">Start Time:</label>
-            <input type="datetime-local" id="start" name="start" value="{{.StartTime}}" class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500">
-          </div>
-          <div class="px-3 mb-6 md:mb-0">
-            <label for="end" class="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">End Time:</label>
-            <input type="datetime-local" id="end" name="end" value="{{.EndTime}}" class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500">
-          </div>
-          <div class="px-3 flex items-end">
-            <button type="submit" class="mt-2 px-4 py-3 bg-blue-500 text-white rounded focus:outline-none focus:border-gray-500 focus:bg-blue-600 leading-tight">Filter</button>
-          </div>
+            <div class="px-3 mb-6 md:mb-0">
+                <label for="start" class="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">Start
+                    Time:</label>
+                <input type="datetime-local" id="start" name="start" value="{{.StartTime}}"
+                       class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500">
+            </div>
+            <div class="px-3 mb-6 md:mb-0">
+                <label for="end" class="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">End
+                    Time:</label>
+                <input type="datetime-local" id="end" name="end" value="{{.EndTime}}"
+                       class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500">
+            </div>
+            <div class="px-3 flex items-end">
+                <button type="submit"
+                        class="mt-2 px-4 py-3 bg-blue-500 text-white rounded focus:outline-none focus:border-gray-500 focus:bg-blue-600 leading-tight">
+                    Filter
+                </button>
+            </div>
         </div>
-      </form>
-    </div>
-  <div class="w-full">
+    </form>
+</div>
+<div class="w-full">
     <div class="p-4 shadow-lg rounded-lg">
-      <canvas id="commandsExecutionTime"></canvas>
+        <canvas id="commandsExecutionTime"></canvas>
     </div>
-  </div>
-  </body>
-  <script>
-    (async function() {
-      const chartData = JSON.parse(`{{.ChartJSON}}`);
+</div>
+</body>
+<script>
+    (async function () {
+        const chartData = JSON.parse(`{{.ChartJSON}}`);
 
-      chartData.options.onClick = function(event, elements) {
-        // 'elements' is an array of elements that are at the click position.
-        if (elements.length > 0) {
-          const firstElement = elements[0];
-          const index = firstElement.index;
+        chartData.options.onClick = function (event, elements) {
+            // 'elements' is an array of elements that are at the click position.
+            if (elements.length > 0) {
+                const firstElement = elements[0];
+                const index = firstElement.index;
 
-          console.log(chartData);
-          const commandInfo = chartData.data.ids[index];
+                console.log(chartData);
+                const commandInfo = chartData.data.ids[index];
 
-          window.location.href = `/overview?id=${commandInfo}`;
+                window.location.href = `/overview?id=${commandInfo}`;
+            }
         }
-      }
-      if (chartData != null) {
         new Chart(document.getElementById('commandsExecutionTime'), chartData);
-      }
     })();
-  </script>
+</script>
 </html>

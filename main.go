@@ -41,6 +41,9 @@ func init() {
 	// setting up optional application configuration
 	config.SetupConfig()
 
+	// setting up the LDA binary path
+	config.SetupLdaBinaryPath()
+
 	// setup database and run migrations
 	database.Setup()
 	database.RunMigrations()

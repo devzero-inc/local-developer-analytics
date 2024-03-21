@@ -1,0 +1,14 @@
+version: v1
+plugins:
+  # Generate go files
+  - plugin: buf.build/protocolbuffers/go:v1.31.0
+    out: gen
+    opt: paths=source_relative
+  # Generate go-grpc files
+  - plugin: buf.build/grpc/go:v1.3.0
+    out: gen
+    opt: paths=source_relative
+  # Generate connect-go files
+  - plugin: buf.build/connectrpc/go:v1.12.0
+    out: gen
+    opt: paths=source_relative

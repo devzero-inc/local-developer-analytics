@@ -1,19 +1,17 @@
-# Use gdate on macOS (GNU coreutils), date on Linux
-if type -q gdate
-    set DATE_CMD gdate
-else
-    set DATE_CMD date
+function generate_uuid
+    echo (date +%s)"-"(echo %self)"-"(random)
+    | shasum
+    | cut -d " " -f1
 end
 
-function preexec --on-event fish_preexec
-    # Capture the command start time in milliseconds
-    set -gx COMMAND_START_TIME ($DATE_CMD +%s%3N)
-    set -gx LAST_COMMAND $argv
+function fish_preexec --on-event fish_preexec
+  set -gx LAST_COMMAND $argv[1]
+  set -gx UUID (generate_uuid)
+  # Send a start execution message
+  {{.CommandScriptPath}} "start" "$LAST_COMMAND" "$PWD" "$USER" "$UUID"
 end
 
-function precmd --on-event fish_prompt
-    set end_time ($DATE_CMD +%s%3N)
-    set duration (math $end_time - $COMMAND_START_TIME)
-    # Call the logging script with command execution details
-    {{.CommandScriptPath}} "$LAST_COMMAND" "$PWD" "$USER" "$COMMAND_START_TIME" "$end_time" "$duration"
+function fish_postexec --on-event fish_postexec
+  # Send an end execution message
+  {.CommandScriptPath}} "end" "$LAST_COMMAND" "$PWD" "$USER" "$UUID"
 end

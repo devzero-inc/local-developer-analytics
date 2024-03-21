@@ -9,8 +9,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// DB is the database connection.
 var DB *sqlx.DB
 
+// Setup initializes the database connection.
 func Setup() {
 
 	dbPath := filepath.Join(config.LdaDir, "lda.db")

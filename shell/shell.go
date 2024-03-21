@@ -1,61 +1,67 @@
 package shell
 
 import (
-	"bufio"
 	"bytes"
 	"embed"
+	"fmt"
 	"lda/collector"
 	"lda/config"
 	"lda/logging"
+	"lda/util"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 )
 
 const (
-	shellDir        = ".lda"
+	ldaScript       = "lda.sh"
 	execPermissions = 0755
+	CollectorName   = "collector.sh"
+	CollectorScript = "scripts/collector.sh"
+)
 
-	bourneSource = `
+var (
+	templateSources = map[config.ShellType]string{
+		config.Zsh:  "scripts/zsh.sh",
+		config.Bash: "scripts/bash.sh",
+		config.Fish: "scripts/fish.sh",
+	}
+
+	sourceScripts = map[config.ShellType]string{
+		config.Zsh: `
 # LDA shell source
 if [ -f "$HOME/.lda/lda.sh" ]; then
     source "$HOME/.lda/lda.sh"
-fi`
-	fishSource = `
+fi`,
+		config.Bash: `
+# LDA shell source
+if [ -f "$HOME/.lda/lda.sh" ]; then
+    source "$HOME/.lda/lda.sh"
+fi`,
+		config.Fish: `
 # LDA shell source
 if test -f "$HOME/.lda/lda.sh"
     source "$HOME/.lda/lda.sh"
-end`
-)
-
-// Embedding scripts directory
-//go:embed scripts/*
-var templateFS embed.FS
-
-func InitShellConfiguration() {
-
-	filePath := filepath.Join(config.LdaDir, "lda.sh")
-	var shellScriptLocation string
-
-	switch config.Shell {
-	case config.Zsh:
-		shellScriptLocation = "scripts/zsh.sh"
-	case config.Bash:
-		shellScriptLocation = "scripts/bash.sh"
-	case config.Fish:
-		shellScriptLocation = "scripts/fish.sh"
-	default:
-		logging.Log.Error().Msg("Unsupported shell")
-		return
+end`,
 	}
 
-	collectorFilePath := filepath.Join(config.LdaDir, "collector.sh")
+	// Embedding scripts directory
+	//
+	//go:embed scripts/*
+	templateFS embed.FS
+)
 
-	cmdTmpl, err := template.ParseFS(templateFS, "scripts/collector.sh")
+// InstallShellConfiguration installs the shell configuration
+func InstallShellConfiguration() error {
+
+	filePath := filepath.Join(config.LdaDir, ldaScript)
+
+	collectorFilePath := filepath.Join(config.LdaDir, CollectorName)
+
+	cmdTmpl, err := template.ParseFS(templateFS, CollectorScript)
 	if err != nil {
 		logging.Log.Err(err).Msg("Failed to parse collector template")
-		return
+		return err
 	}
 
 	var cmdContent bytes.Buffer
@@ -63,93 +69,98 @@ func InitShellConfiguration() {
 		"SocketPath": collector.SocketPath,
 	}); err != nil {
 		logging.Log.Err(err).Msg("Failed to execute cmd template")
-		return
+		return err
 	}
 
 	if err := os.WriteFile(collectorFilePath, cmdContent.Bytes(), execPermissions); err != nil {
 		logging.Log.Err(err).Msg("Failed to write collector files")
-		return
+		return err
 	}
 
-	shellTempl, err := template.ParseFS(templateFS, shellScriptLocation)
+	shellTmplLocation, ok := templateSources[config.Shell]
+	if !ok {
+		logging.Log.Error().Msg("Unsupported shell")
+		return fmt.Errorf("unsupported operating system")
+	}
+
+	shellTmpl, err := template.ParseFS(templateFS, shellTmplLocation)
 	if err != nil {
 		logging.Log.Err(err).Msg("Failed to parse shell template")
-		return
+		return err
 	}
 
 	var shellContent bytes.Buffer
-	if err := shellTempl.Execute(&shellContent, map[string]interface{}{
+	if err := shellTmpl.Execute(&shellContent, map[string]interface{}{
 		"CommandScriptPath": collectorFilePath,
 	}); err != nil {
 		logging.Log.Err(err).Msg("Failed to execute shell template")
-		return
+		return err
 	}
 
 	if err := os.WriteFile(filePath, shellContent.Bytes(), execPermissions); err != nil {
 		logging.Log.Err(err).Msg("Failed to write shell files")
-		return
+		return err
 	}
 
 	logging.Log.Info().Msg("Shell configured successfully")
+
+	return nil
 }
 
-func InjectShellSource() {
+// DeleteShellConfiguration removes the shell configuration
+func DeleteShellConfiguration() error {
 
+	filePath := filepath.Join(config.LdaDir, "lda.sh")
+
+	if err := os.Remove(filePath); err != nil {
+		logging.Log.Err(err).Msg("Failed to remove shell configuration")
+		return err
+	}
+
+	filePath = filepath.Join(config.LdaDir, "collector.sh")
+	if err := os.Remove(filePath); err != nil {
+		logging.Log.Err(err).Msg("Failed to remove shell configuration")
+		return err
+	}
+
+	logging.Log.Info().Msg("Shell configuration removed successfully")
+
+	return nil
+}
+
+// InjectShellSource injects the shell source
+func InjectShellSource() error {
 	logging.Log.Info().Msg("Installing shell source")
 
 	var shellConfigFile string
-	var source string
-
 	switch config.Shell {
 	case config.Zsh:
 		shellConfigFile = filepath.Join(config.HomeDir, ".zshrc")
-		source = bourneSource
 	case config.Bash:
 		shellConfigFile = filepath.Join(config.HomeDir, ".bashrc")
-		source = bourneSource
 	case config.Fish:
 		shellConfigFile = filepath.Join(config.HomeDir, ".config/fish/config.fish")
-		source = fishSource
 	default:
 		logging.Log.Error().Msg("Unsupported shell")
-		return
+		return fmt.Errorf("unsupported shell")
 	}
 
+	source, ok := sourceScripts[config.Shell]
+	if !ok {
+		logging.Log.Error().Msg("Unsupported shell")
+		return fmt.Errorf("unsupported shell")
+	}
+
+	logging.Log.Debug().Msgf("Shell config file: %s", shellConfigFile)
 	// Check if the script is already present to avoid duplicates
-	if !isScriptPresent(shellConfigFile, source) {
-		if err := appendToFile(shellConfigFile, source); err != nil {
-			return
+	if !util.IsScriptPresent(shellConfigFile, source) {
+		if err := util.AppendToFile(shellConfigFile, source); err != nil {
+			logging.Log.Error().Msg("Failed to append to the file")
+			return err
 		}
 	}
 
 	logging.Log.Info().Msg("Shell source injected successfully")
-}
 
-func isScriptPresent(filePath, script string) bool {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return false
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), ".lda/lda.sh") {
-			return true
-		}
-	}
-	return false
-}
-
-func appendToFile(filePath, content string) error {
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if _, err := f.WriteString(content); err != nil {
-		return err
-	}
 	return nil
 }

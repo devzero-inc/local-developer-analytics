@@ -7,40 +7,44 @@ import (
 	"regexp"
 )
 
+// Command is the model for command
 type Command struct {
-	Id            int    `json:"id" db:"id"`
-	PID           int    `json:"pid" db:"pid"`
+	Id            int64  `json:"id" db:"id"`
 	Category      string `json:"category" db:"category"`
 	Command       string `json:"command" db:"command"`
 	User          string `json:"user" db:"user"`
 	Directory     string `json:"directory" db:"directory"`
-	ExecutionTime int64  `json:"executionTime" db:"execution_time"`
-	StartTime     int64  `json:"startTime" db:"start_time"`
-	EndTime       int64  `json:"endTime" db:"end_time"`
+	ExecutionTime int64  `json:"execution_time" db:"execution_time"`
+	StartTime     int64  `json:"start_time" db:"start_time"`
+	EndTime       int64  `json:"end_time" db:"end_time"`
 }
 
-func GetAllCommands() []Command {
+// GetAllCommands fetches all commands from the database
+func GetAllCommands() ([]Command, error) {
 	var commands []Command
 	if err := database.DB.Select(&commands, "SELECT * FROM commands"); err != nil {
 		logging.Log.Err(err).Msg("Failed to get all commands")
+		return nil, err
 	}
 
-	return commands
+	return commands, nil
 }
 
-func GetCommandById(id int64) Command {
+// GetCommandById fetches a command by its ID
+func GetCommandById(id int64) (*Command, error) {
 	var command Command
 	query := `SELECT * FROM commands WHERE id = ?`
 
-	err := database.DB.Get(&command, query, id)
-	if err != nil {
+	if err := database.DB.Get(&command, query, id); err != nil {
 		logging.Log.Err(err).Msg("Failed to get command by id")
+		return nil, err
 	}
 
-	return command
+	return &command, nil
 }
 
-func GetAllCommandsForPeriod(start int64, end int64) []Command {
+// GetAllCommandsForPeriod fetches all commands for a given period
+func GetAllCommandsForPeriod(start int64, end int64) ([]Command, error) {
 	var commands []Command
 
 	query := `SELECT id, category, SUM(execution_time) AS execution_time 
@@ -49,15 +53,16 @@ func GetAllCommandsForPeriod(start int64, end int64) []Command {
               GROUP BY category 
               ORDER BY category ASC, SUM(execution_time) DESC`
 
-	err := database.DB.Select(&commands, query, start, end)
-	if err != nil {
+	if err := database.DB.Select(&commands, query, start, end); err != nil {
 		logging.Log.Err(err).Msg("Failed to get aggregated commands with start and end times")
+		return nil, err
 	}
 
-	return commands
+	return commands, nil
 }
 
-func GetAllCommandsForCategoryForPeriod(category string, start int64, end int64) []Command {
+// GetAllCommandsForCategoryForPeriod fetches all commands for a given category and period
+func GetAllCommandsForCategoryForPeriod(category string, start int64, end int64) ([]Command, error) {
 	var commands []Command
 
 	query := `SELECT id, category, command, SUM(execution_time) AS execution_time 
@@ -66,41 +71,28 @@ func GetAllCommandsForCategoryForPeriod(category string, start int64, end int64)
               GROUP BY command 
               ORDER BY command ASC, SUM(execution_time) DESC`
 
-	err := database.DB.Select(&commands, query, category, start, end)
-	if err != nil {
+	if err := database.DB.Select(&commands, query, category, start, end); err != nil {
 		logging.Log.Err(err).Msg("Failed to get aggregated commands with start and end times")
+		return nil, err
 	}
 
-	return commands
+	return commands, nil
 }
 
-//func GetAllCommandsForPeriod(start, end string) []Command {
-//	var commands []Command
-//
-//	query := `SELECT * FROM commands WHERE start_time >= ? AND end_time <= ? ORDER BY start_time ASC`
-//
-//	err := database.DB.Select(&commands, query, start, end)
-//	if err != nil {
-//		logging.Log.Err(err).Msg("Failed to get commands with start and end times")
-//	}
-//
-//	return commands
-//}
-
-func InsertCommand(command Command) {
+// InsertCommand inserts a command into the database
+func InsertCommand(command Command) error {
 	query := `INSERT INTO commands (category, command, user, directory, execution_time, start_time, end_time)
 	VALUES (:category, :command, :user, :directory, :execution_time, :start_time, :end_time)`
 
 	_, err := database.DB.NamedExec(query, command)
-	if err != nil {
-		logging.Log.Err(err).Msg("Failed to insert command")
-	}
+
+	return err
 }
 
+// ParseCommand extracts the command name from a command string.
 func ParseCommand(command string) string {
 
 	// TODO: there might be some other cases as well like: watch, time etc
-	// we might need to figure out how to handle them
 	var pattern = regexp.MustCompile(`^(?:sudo|nohup)?\s*(?:\./|/usr/bin/|/bin/|/usr/local/bin/)?([^/ ]+?)(?:\s|$)`)
 
 	matches := pattern.FindStringSubmatch(command)
