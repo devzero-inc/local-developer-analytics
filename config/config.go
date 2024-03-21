@@ -1,23 +1,28 @@
 package config
 
 import (
-	"lda/logging"
-
 	"github.com/spf13/viper"
+	"lda/logging"
 )
 
 // Config config definition
 type Config struct {
-	Debug            bool   `mapstructure:"debug"`
-	RemoteCollection bool   `mapstructure:"remote_collection"`
-	ServerHost       string `mapstructure:"server_host"`
-	ServerPort       int    `mapstructure:"server_port"`
-	ExcludeRegex     string `mapstructure:"exclude_regex"`
+	Debug                     bool   `mapstructure:"debug"`
+	ProcessInterval           int    `mapstructure:"process_interval"`
+	CommandInterval           int    `mapstructure:"command_interval"`
+	CommandIntervalMultiplier int    `mapstructure:"command_interval_multiplier"`
+	RemoteCollection          bool   `mapstructure:"remote_collection"`
+	ServerHost                string `mapstructure:"server_host"`
+	ServerPort                int    `mapstructure:"server_port"`
+	ExcludeRegex              string `mapstructure:"exclude_regex"`
+	SecureConnection          bool   `mapstructure:"secure_connection"`
+	CertFile                  string `mapstructure:"cert_file"`
 }
 
+// AppConfig is the global configuration instance
 var AppConfig *Config
 
-// Setup initialize the configuration instance
+// SetupConfig initialize the configuration instance
 func SetupConfig() {
 
 	logging.Log.Debug().Msg("Setting up application configuration")
@@ -26,9 +31,13 @@ func SetupConfig() {
 	viper.SetConfigType("toml")
 	viper.AddConfigPath(LdaDir)
 
+	// Set default configuration values
 	var config = &Config{
-		Debug:            false,
-		RemoteCollection: false,
+		Debug:                     false,
+		RemoteCollection:          false,
+		ProcessInterval:           120,
+		CommandInterval:           1,
+		CommandIntervalMultiplier: 5,
 	}
 
 	if err := viper.ReadInConfig(); err != nil {

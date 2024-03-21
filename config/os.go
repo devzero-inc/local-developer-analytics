@@ -7,6 +7,7 @@ import (
 	"runtime"
 )
 
+// ShellType is the type of the shell
 type ShellType int
 
 const (
@@ -16,6 +17,7 @@ const (
 	Sh   ShellType = 3
 )
 
+// OSType is the type of the operating system
 type OSType int
 
 const (
@@ -28,12 +30,16 @@ var (
 	OS OSType
 	// Shell is the active shell
 	Shell ShellType
+	// ShellLocation is the shell configuration directory
+	ShellLocation string
 	// HomeDir is the user home directory
 	HomeDir string
-	// LdaDir is the directory.
+	// LdaDir is the home lad directory where all configurations are stored.
 	LdaDir string
 	// IsRoot is a value to check if the user is root
 	IsRoot bool
+	// ExePath is the path to the lda binary
+	ExePath string
 )
 
 // SetupOs determine the operating system
@@ -54,10 +60,10 @@ func SetupOs() {
 // SetupShell sets the current active shell
 func SetupShell() {
 
-	shell := os.Getenv("SHELL")
-	logging.Log.Info().Msgf("Trying to determine the shell: %s", shell)
+	ShellLocation = os.Getenv("SHELL")
+	logging.Log.Info().Msgf("Trying to determine the shell: %s", ShellLocation)
 
-	switch shell {
+	switch ShellLocation {
 	case "/bin/bash":
 		logging.Log.Info().Msg("Running bash shell")
 		Shell = Bash
@@ -77,7 +83,7 @@ func SetupShell() {
 
 }
 
-// SetHomeDir sets the user home directory
+// SetupHomeDir sets the user home directory
 func SetupHomeDir() {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -101,4 +107,14 @@ func SetupLdaDir() {
 // SetupUserConfig sets the user permission level (root or not)
 func SetupUserConfig() {
 	IsRoot = os.Geteuid() == 0
+}
+
+// SetupLdaBinaryPath sets the path to the lda binary
+func SetupLdaBinaryPath() {
+	exePath, err := os.Executable()
+	if err != nil {
+		logging.Log.Fatal().Err(err).Msg("Failed to get executable path")
+		os.Exit(1)
+	}
+	ExePath = exePath
 }

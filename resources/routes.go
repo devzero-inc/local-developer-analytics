@@ -12,6 +12,7 @@ import (
 )
 
 // Embedding directory
+//
 //go:embed views/*
 var templateFS embed.FS
 
@@ -48,40 +49,44 @@ func Serve() {
 		loc, _ := time.LoadLocation("Local")
 		now := time.Now().In(loc)
 
-		// Function to convert time.Time to Unix milliseconds
-		toUnixMillis := func(t time.Time) int64 {
-			return t.UnixNano() / int64(time.Millisecond)
-		}
-
 		var startMillis, endMillis int64
 
 		start := r.URL.Query().Get("start")
 		if start == "" {
 			// Default start time to the start of today (00:00:00)
 			startTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-			startMillis = toUnixMillis(startTime)
+			startMillis = startTime.UnixMilli()
 		} else {
 			// Parse the incoming start time and convert it to Unix milliseconds
 			if parsedTime, err := time.ParseInLocation("2006-01-02T15:04", start, loc); err == nil {
-				startMillis = toUnixMillis(parsedTime)
+				startMillis = parsedTime.UnixMilli()
 			}
 		}
 
 		end := r.URL.Query().Get("end")
 		if end == "" {
 			// Default end time to the current time
-			endMillis = toUnixMillis(now)
+			endMillis = now.UnixMilli()
 		} else {
 			// Parse the incoming end time and convert it to Unix milliseconds
 			if parsedTime, err := time.ParseInLocation("2006-01-02T15:04", end, loc); err == nil {
-				endMillis = toUnixMillis(parsedTime)
+				endMillis = parsedTime.UnixMilli()
 			}
 		}
 
 		logging.Log.Info().Msgf("Reading data with start: %s, end: %s", start, end)
+		logging.Log.Info().Msgf("Reading data with start: %s, end: %s", startMillis, endMillis)
 
-		commands := collector.GetAllCommandsForPeriod(startMillis, endMillis)
-		processes := collector.GetAllProcessesForPeriod(startMillis, endMillis)
+		commands, err := collector.GetAllCommandsForPeriod(startMillis, endMillis)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		processes, err := collector.GetAllProcessesForPeriod(startMillis, endMillis)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		timeProcesses, err := collector.GetTopProcessesAndMetrics(startMillis, endMillis)
 		if err != nil {
@@ -122,13 +127,15 @@ func Serve() {
 			end = time.UnixMilli(endMillis).UTC().Format("2006-01-02T15:04")
 		}
 
-		tmpl.Execute(w, map[string]interface{}{
+		if err := tmpl.Execute(w, map[string]interface{}{
 			"CommandsJSON":      string(commandsJSON),
 			"ProcessesJSON":     string(processesJSON),
 			"TimeProcessesJSON": string(timeProcessesJSON),
 			"StartTime":         start,
 			"EndTime":           end,
-		})
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	})
 
 	http.HandleFunc("/command", func(w http.ResponseWriter, r *http.Request) {
@@ -144,38 +151,37 @@ func Serve() {
 		loc, _ := time.LoadLocation("Local")
 		now := time.Now().In(loc)
 
-		// Function to convert time.Time to Unix milliseconds
-		toUnixMillis := func(t time.Time) int64 {
-			return t.UnixNano() / int64(time.Millisecond)
-		}
-
 		var startMillis, endMillis int64
 
 		start := queryParams.Get("start")
 		if start == "" {
 			// Default start time to the start of today (00:00:00)
 			startTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-			startMillis = toUnixMillis(startTime)
+			startMillis = startTime.UnixMilli()
 		} else {
 			// Parse the incoming start time and convert it to Unix milliseconds
 			if parsedTime, err := time.ParseInLocation("2006-01-02T15:04", start, loc); err == nil {
-				startMillis = toUnixMillis(parsedTime)
+				startMillis = parsedTime.UnixMilli()
 			}
 		}
 
 		end := queryParams.Get("end")
 		if end == "" {
 			// Default end time to the current time
-			endMillis = toUnixMillis(now)
+			endMillis = now.UnixMilli()
 		} else {
 			// Parse the incoming end time and convert it to Unix milliseconds
 			if parsedTime, err := time.ParseInLocation("2006-01-02T15:04", end, loc); err == nil {
-				endMillis = toUnixMillis(parsedTime)
+				endMillis = parsedTime.UnixMilli()
 			}
 		}
 
-		commands := collector.GetAllCommandsForCategoryForPeriod(
+		commands, err := collector.GetAllCommandsForCategoryForPeriod(
 			label, startMillis, endMillis)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		var labels []string
 		var ids []int
@@ -183,7 +189,7 @@ func Serve() {
 
 		for _, cmd := range commands {
 			labels = append(labels, cmd.Command)
-			ids = append(ids, cmd.Id)
+			ids = append(ids, int(cmd.Id))
 			dataPoints = append(dataPoints, cmd.ExecutionTime)
 		}
 
@@ -231,11 +237,13 @@ func Serve() {
 			end = time.UnixMilli(endMillis).UTC().Format("2006-01-02T15:04")
 		}
 
-		tmpl.Execute(w, map[string]interface{}{
+		if err := tmpl.Execute(w, map[string]interface{}{
 			"ChartJSON": string(chartJSON),
 			"StartTime": start,
 			"EndTime":   end,
-		})
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 
 	})
 
@@ -254,9 +262,17 @@ func Serve() {
 			http.Error(w, "Failed to parse id", http.StatusBadRequest)
 		}
 
-		command := collector.GetCommandById(i)
+		command, err := collector.GetCommandById(i)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-		processes := collector.GetAllProcessesForPeriod(command.StartTime, command.EndTime)
+		processes, err := collector.GetAllProcessesForPeriod(command.StartTime, command.EndTime)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		timeProcesses, err := collector.GetTopProcessesAndMetrics(command.StartTime, command.EndTime)
 		if err != nil {
@@ -281,10 +297,12 @@ func Serve() {
 			return
 		}
 
-		tmpl.Execute(w, map[string]interface{}{
+		if err := tmpl.Execute(w, map[string]interface{}{
 			"ProcessesJSON":     string(processesJSON),
 			"TimeProcessesJSON": string(timeProcessesJSON),
-		})
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 
 	})
 }

@@ -2,6 +2,7 @@ package database
 
 import "lda/logging"
 
+// RunMigrations all additional migrations should be registered here
 func RunMigrations() {
 	ensureMigrationTableExists()
 	createProcessesTable()
@@ -30,14 +31,13 @@ func createProcessesTable() {
 			pid INTEGER NOT NULL,
 			name TEXT NOT NULL,
 			status TEXT,
-			start_time INTEGER,
-			end_time INTEGER,
-			execution_time INTEGER,
+			created_time INTEGER,
+			stored_time INTEGER,
 			os TEXT,
 			platform TEXT,
 			platform_family TEXT,
 			cpu_usage REAL,
-			used_memory REAL
+			memory_usage REAL
 		);`
 
 		_, err := DB.Exec(createProcessesTableSQL)

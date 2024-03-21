@@ -4,6 +4,8 @@ BIN := /usr/local/bin
 REV := $(shell git rev-parse HEAD)
 CHANGES := $(shell test -n "$$(git status --porcelain)" && echo '+CHANGES' || true)
 
+PROTO_LOCATION := $(shell find proto -iname "proto" -exec echo "-I="{} \;)
+
 PACKAGE = lda
 TARGET = lda
 
@@ -46,6 +48,8 @@ endif
 	run \
 	clean \
 	lint \
+	proto \
+	proto-lint \
 	hooks \
 	hooks-install \
 	docker-create-buildx \
@@ -54,15 +58,15 @@ endif
 all: build debug
 
 ## Build binary
-build:
+build: proto
 	CGO_ENABLED=1 GOOS=$(UNAME) go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
 
 ## Install binary to GOPATH
-install:
+install: proto
 	CGO_ENABLED=1 GOOS=$(UNAME) go install -a -tags netgo -ldflags="$(LDFLAGS)"
 
 ## Install binary to /usr/local/bin
-install-global: install
+install-global: proto install
 	@sudo cp ${GOPATH}/bin/$(TARGET) /usr/local/bin/$(TARGET)
 
 ## Build and debug
@@ -104,6 +108,16 @@ test:
 clean:
 	rm -rf ./docs/*
 	rm -rf ./$(TARGET)
+
+## Lint proto files
+proto-lint:
+	buf lint --error-format=json
+
+## Compile all proto files with buf
+proto: clean
+	rm -rf ./gen/*
+	mkdir -p gen # create the empty directory for proto targets.
+	buf generate --verbose .
 
 ## Rebuild dockerfile and run docker compose
 docker-compose:
