@@ -12,7 +12,7 @@ type Config struct {
 	RemoteCollection bool   `mapstructure:"remote_collection"`
 	ServerHost       string `mapstructure:"server_host"`
 	ServerPort       int    `mapstructure:"server_port"`
-	ExcludeRegex     string `mapstructure:"server_host"`
+	ExcludeRegex     string `mapstructure:"exclude_regex"`
 }
 
 var AppConfig *Config
