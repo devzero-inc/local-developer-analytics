@@ -236,7 +236,7 @@ func startMacOSDaemon() error {
 func stopLinuxDaemon() error {
 	cmd := exec.Command("systemctl", "--user", "stop", ServicedName)
 	if config.IsRoot {
-		cmd := exec.Command("systemctl", "stop", ServicedName)
+		cmd = exec.Command("systemctl", "stop", ServicedName)
 	}
 
 	var stderr bytes.Buffer
