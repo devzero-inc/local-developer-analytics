@@ -3,6 +3,7 @@ package collector
 import (
 	"lda/config"
 	"lda/database"
+	gen "lda/gen/api/v1"
 	"lda/logging"
 	"regexp"
 )
@@ -114,4 +115,17 @@ func IsCommandAcceptable(command string) bool {
 	}
 
 	return true
+}
+
+func MapCommandToProto(command Command) *gen.Command {
+	return &gen.Command{
+		Id:            command.Id,
+		Category:      command.Category,
+		Command:       command.Command,
+		User:          command.User,
+		Directory:     command.Directory,
+		ExecutionTime: command.ExecutionTime,
+		StartTime:     command.StartTime,
+		EndTime:       command.EndTime,
+	}
 }

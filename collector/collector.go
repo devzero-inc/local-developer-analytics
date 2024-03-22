@@ -3,7 +3,9 @@ package collector
 import (
 	"context"
 	"fmt"
+	"lda/client"
 	"lda/config"
+	gen "lda/gen/api/v1"
 	"lda/logging"
 	"net"
 	"os"
@@ -18,6 +20,7 @@ import (
 
 const SocketPath = "/tmp/lda.socket"
 
+// Collector collects command and system information
 type Collector struct {
 	socketPath            string
 	ongoingCommands       map[string]Command
@@ -26,13 +29,15 @@ type Collector struct {
 	collectionContext     context.Context
 	collectionCancelFunc  context.CancelFunc
 	isCollectionRunning   bool
+	client                *client.Client
 }
 
 // NewCollector creates a new collector instance
-func NewCollector(socketPath string) *Collector {
+func NewCollector(socketPath string, client *client.Client) *Collector {
 	return &Collector{
 		socketPath:      socketPath,
 		ongoingCommands: make(map[string]Command),
+		client:          client,
 	}
 }
 
@@ -103,6 +108,7 @@ func (c *Collector) collectOnce() error {
 	}
 
 	var processInfos []Process
+	var processMetrics []*gen.Process
 	for _, p := range processes {
 		createTime, err := p.CreateTime()
 		if err != nil {
@@ -136,7 +142,7 @@ func (c *Collector) collectOnce() error {
 
 		// Adjust the Process struct to accept ExecutionTime as int64 if not already
 		processInfo := Process{
-			PID:            int(p.Pid),
+			PID:            int64(p.Pid),
 			Name:           name,
 			Status:         status,
 			CreatedTime:    createTime,
@@ -145,11 +151,21 @@ func (c *Collector) collectOnce() error {
 			Platform:       hostInfo.Platform,
 			PlatformFamily: hostInfo.PlatformFamily,
 			CPUUsage:       cpuPercent,
-			MemoryUsage:    memorypercent,
+			MemoryUsage:    float64(memorypercent),
 		}
 
 		InsertProcess(processInfo)
 		processInfos = append(processInfos, processInfo)
+
+		if c.client != nil {
+			processMetrics = append(processMetrics, MapProcessToProto(processInfo))
+		}
+	}
+
+	if c.client != nil {
+		if err := c.client.SendProcesses(processMetrics); err != nil {
+			logging.Log.Error().Err(err).Msg("Failed to send processes")
+		}
 	}
 
 	return nil
@@ -293,6 +309,12 @@ func (c *Collector) handleEndCommand(parts []string) error {
 		}
 		delete(c.ongoingCommands, parts[4])
 		c.onEndCommand()
+
+		if c.client != nil {
+			if err := c.client.SendCommands([]*gen.Command{MapCommandToProto(command)}); err != nil {
+				logging.Log.Error().Err(err).Msg("Failed to send command")
+			}
+		}
 	} else {
 		logging.Log.Error().Msg("Matching start command not found")
 		return fmt.Errorf("matching start command not found")

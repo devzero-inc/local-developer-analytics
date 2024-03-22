@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// ClientConfig holds configuration for the client connection.
-type ClientConfig struct {
+// Config holds configuration for the client connection.
+type Config struct {
 	Address          string // The server address
 	SecureConnection bool   // True for secure (HTTPS), false for insecure (HTTP)
 	CertFile         string // Optional path to the TLS cert file for secure connections
@@ -28,7 +28,7 @@ type Client struct {
 }
 
 // NewClient creates a new client and returns a pointer to it and an error
-func NewClient(config ClientConfig) (*Client, error) {
+func NewClient(config Config) (*Client, error) {
 	var opts []grpc.DialOption
 
 	// Setup connection security based on config

@@ -138,6 +138,52 @@ func StopDaemon() error {
 	return nil
 }
 
+// ReloadDaemon signals the daemon to reload its configuration.
+func ReloadDaemon() error {
+	logging.Log.Info().Msg("Reloading daemon service...")
+
+	switch config.OS {
+	case config.Linux:
+		return reloadLinuxDaemon()
+	case config.MacOS:
+		return reloadMacOSDaemon()
+	default:
+		logging.Log.Error().Msg("Unsupported operating system for reload")
+		return fmt.Errorf("unsupported operating system")
+	}
+}
+
+// reloadLinuxDaemon reloads the daemon service on Linux using systemctl.
+func reloadLinuxDaemon() error {
+	cmd := exec.Command("systemctl", getSystemCtlUserOption(), "reload", ServicedName)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		logging.Log.Err(err).Msgf("Failed to reload daemon service: %v", stderr.String())
+		return fmt.Errorf("failed to reload daemon service: %v", stderr.String())
+	}
+
+	logging.Log.Info().Msg("Daemon service reloaded successfully")
+	return nil
+}
+
+// reloadMacOSDaemon reloads the daemon service on macOS
+func reloadMacOSDaemon() error {
+	stopErr := stopMacOSDaemon()
+	if stopErr != nil {
+		return stopErr
+	}
+	startErr := startMacOSDaemon()
+	if startErr != nil {
+		return startErr
+	}
+
+	logging.Log.Info().Msg("Daemon service reloaded successfully")
+	return nil
+}
+
 // startLinuxDaemon starts the daemon service on Linux
 func startLinuxDaemon() error {
 	if !checkLogindService() && !config.IsRoot {

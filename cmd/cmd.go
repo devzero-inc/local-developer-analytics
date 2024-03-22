@@ -53,6 +53,13 @@ var (
 		Run:   stop,
 	}
 
+	reloadCmd = &cobra.Command{
+		Use:   "reload",
+		Short: "Reload daemon runner",
+		Long:  `Reload daemon runner for LDA Project.`,
+		Run:   reload,
+	}
+
 	serveCmd = &cobra.Command{
 		Use:   "serve",
 		Short: "Serve local client",
@@ -75,6 +82,7 @@ func init() {
 	ldaCmd.AddCommand(installCmd)
 	ldaCmd.AddCommand(uninstallCmd)
 	ldaCmd.AddCommand(serveCmd)
+	ldaCmd.AddCommand(reloadCmd)
 }
 
 func includeShowFlagsForLda(cmd *cobra.Command) {
@@ -100,6 +108,12 @@ func Execute() {
 func lda(cmd *cobra.Command, _ []string) {
 	if err := cmd.Help(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to show help")
+	}
+}
+
+func reload(_ *cobra.Command, _ []string) {
+	if err := daemon.ReloadDaemon(); err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to reload daemon")
 	}
 }
 
