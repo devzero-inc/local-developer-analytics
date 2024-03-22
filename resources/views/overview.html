@@ -21,148 +21,28 @@
 </body>
 <script>
     (async function () {
-
         // Use the injected JSON data
-        const processesData = JSON.parse(`{{.ProcessesJSON}}`);
-        const timeProcessesData = JSON.parse(`{{.TimeProcessesJSON}}`);
-        const cpuDataset = [];
-        const memoryDataset = [];
+        const processesChart = JSON.parse(`{{.ProcessesJSON}}`);
+        const cpuTimeChart = JSON.parse(`{{.CPUTimeSeriesJSON}}`);
+        const memoryTimeChart = JSON.parse(`{{.MemoryTimeSeriesJSON}}`);
 
-        Object.keys(timeProcessesData).forEach(pid => {
-            // CPU Usage Data
-            const cpuUsageData = timeProcessesData[pid].map(process => ({
-                x: process.stored_time,
-                y: process.cpu_usage
-            })).sort((a, b) => a.x - b.x); // Sort by endTime
-            const processName = timeProcessesData[pid][0].name;
-            cpuDataset.push({
-                label: `${processName} - ${pid} CPU Usage`,
-                data: cpuUsageData,
-                fill: false,
-                tension: 0.1
-            });
-            // Used Memory Data
-            const usedMemoryData = timeProcessesData[pid].map(process => ({
-                x: process.stored_time,
-                y: process.memory_usage
-            })).sort((a, b) => a.x - b.x); // Sort by endTime
-            memoryDataset.push({
-                label: `${processName} ${pid} Used Memory`,
-                data: usedMemoryData,
-                fill: false,
-                tension: 0.1
-            });
-        });
-
-        new Chart(document.getElementById('memoryTimeSeries').getContext('2d'), {
-            type: 'line',
-            data: {
-                datasets: memoryDataset
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false
-                    },
+        processesChart.options.plugins.tooltip = {
+            callbacks: {
+                beforeTitle: function (context) {
+                    return context[0].raw.processName;
                 },
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        title: {
-                            display: true,
-                            text: 'Time (milliseconds since epoch)'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Memory Usage (%)'
-                        }
-                    }
-                }
             }
-        });
+        };
 
-        new Chart(document.getElementById('cpuTimeSeries').getContext('2d'), {
-            type: 'line',
-            data: {
-                datasets: cpuDataset
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                },
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        title: {
-                            display: true,
-                            text: 'Time (milliseconds since epoch)'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'CPU Usage (%)'
-                        }
-                    }
-                }
-            }
-        });
-
-        if (processesData != null) {
-            new Chart(document.getElementById('processesResourceUsage'), {
-                type: 'scatter',
-                data: {
-                    datasets: [{
-                        label: 'Process Resource Usage',
-                        data: processesData.map(proc => ({
-                            x: proc.cpu_usage,
-                            y: proc.memory_usage,
-                            processName: proc.name,
-                            r: Math.sqrt(proc.cpu_usage * proc.memory_usage)
-                        })),
-                        // Enable custom point styles
-                        pointStyle: 'circle',
-                        // Apply the radius from the data point
-                        pointRadius: function (context) {
-                            return context.raw.r; // Use the calculated radius
-                        }
-                    }]
-                },
-                options: {
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'CPU Usage (%)'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Memory Usage (GB)'
-                            }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                beforeTitle: function (context) {
-                                    return context[0].raw.processName;
-                                },
-                            }
-                        }
-                    }
-                }
-            });
+        processesChart.data.datasets[0].pointRadius = function (context) {
+            return context.raw.r;
         }
+
+        new Chart(document.getElementById('memoryTimeSeries').getContext('2d'), memoryTimeChart);
+
+        new Chart(document.getElementById('cpuTimeSeries').getContext('2d'), cpuTimeChart);
+
+        new Chart(document.getElementById('processesResourceUsage'), processesChart);
 
     })();
 </script>

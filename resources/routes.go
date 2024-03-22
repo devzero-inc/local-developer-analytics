@@ -2,7 +2,6 @@ package resources
 
 import (
 	"embed"
-	"encoding/json"
 	"lda/collector"
 	"lda/logging"
 	"net/http"
@@ -64,7 +63,7 @@ func Serve() {
 			return
 		}
 
-		commandsJson, err := PrepareCommandsExecutionTimeChartData(commands)
+		commandsJson, err := PrepareCommandCategoriesExecutionTimeChartData(commands)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -158,7 +157,7 @@ func Serve() {
 			return
 		}
 
-		commandsJSON, err := json.Marshal(commands)
+		commandsJson, err := PrepareCommandsExecutionTimeChartData(commands)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -181,7 +180,7 @@ func Serve() {
 		}
 
 		if err := tmpl.Execute(w, map[string]interface{}{
-			"CommandsJSON": string(commandsJSON),
+			"CommandsJSON": commandsJson,
 			"StartTime":    start,
 			"EndTime":      end,
 		}); err != nil {
@@ -223,12 +222,17 @@ func Serve() {
 			return
 		}
 
-		processesJSON, err := json.Marshal(processes)
+		processResourceJson, err := PrepareProcessesResourceUsageChartData(processes)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		timeProcessesJSON, err := json.Marshal(timeProcesses)
+		cpuResourceJson, err := PrepareCPUTimeSeriesChartData(timeProcesses)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		memoryResourceJson, err := PrepareMemoryTimeSeriesChartData(timeProcesses)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -241,8 +245,9 @@ func Serve() {
 		}
 
 		if err := tmpl.Execute(w, map[string]interface{}{
-			"ProcessesJSON":     string(processesJSON),
-			"TimeProcessesJSON": string(timeProcessesJSON),
+			"ProcessesJSON":        processResourceJson,
+			"CPUTimeSeriesJSON":    cpuResourceJson,
+			"MemoryTimeSeriesJSON": memoryResourceJson,
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
