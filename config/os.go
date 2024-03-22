@@ -53,6 +53,7 @@ func SetupOs() {
 		logging.Log.Info().Msg("Running on macOS")
 		OS = MacOS
 	default:
+		// TODO: check if this will work on WSL, maybe it will?
 		logging.Log.Fatal().Msg("Unsupported operating system")
 		os.Exit(1)
 	}
