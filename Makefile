@@ -28,7 +28,7 @@ CGO_LDFLAGS=-L/usr/local/lib
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 VERSION := 1.30.0
-BINARY_NAME := buf
+BUF_BINARY_NAME := buf
 
 # count processors
 NPROCS:=1
@@ -73,10 +73,20 @@ install: proto
 install-global: proto install
 	@sudo cp ${GOPATH}/bin/$(TARGET) /usr/local/bin/$(TARGET)
 
+
+# Check if buf is installed and version is correct, enabled smarter handling of buf rule.
+BUF_VERSION := $(shell if command -v $(BIN)/$(BUF_BINARY_NAME) >/dev/null; then $(BIN)/$(BUF_BINARY_NAME) --version; fi)
+VERSION_MATCH := $(findstring ${VERSION},$(BUF_VERSION))
 ## Install buf binary
 buf:
-	curl -sSL "https://github.com/bufbuild/buf/releases/download/v${VERSION}/${BINARY_NAME}-$(shell uname -s)-$(shell uname -m)" -o "${BIN}/${BINARY_NAME}"
-	chmod +x $(BIN)/$(BINARY_NAME)
+	@if [ -x "$(BIN)/$(BUF_BINARY_NAME)" ] && [ -n "$(VERSION_MATCH)" ]; then \
+		echo "The required version of $(BUF_BINARY_NAME) is already installed: $(BUF_VERSION)"; \
+	else \
+		echo "Installing or updating $(BUF_BINARY_NAME)..."; \
+		curl -sSL "https://github.com/bufbuild/buf/releases/download/v${VERSION}/${BUF_BINARY_NAME}-$(shell uname -s)-$(shell uname -m)" -o "${BIN}/${BUF_BINARY_NAME}"; \
+		chmod +x $(BIN)/$(BUF_BINARY_NAME); \
+	fi
+
 
 ## Build and debug
 debug: build
@@ -123,7 +133,7 @@ proto-lint:
 	buf lint --error-format=json
 
 ## Compile all proto files with buf
-proto: clean
+proto: clean buf
 	rm -rf ./gen/*
 	mkdir -p gen # create the empty directory for proto targets.
 	buf generate --verbose .
