@@ -94,7 +94,7 @@ type ChartTooltipOptions struct {
 }
 
 // PrepareCPUTimeSeriesChartData prepares the data for the CPU Time Series chart.
-func PrepareCPUTimeSeriesChartData(processData map[int][]collector.Process) (string, error) {
+func PrepareCPUTimeSeriesChartData(processData map[int64][]collector.Process) (string, error) {
 
 	var datasets []ChartDataDataset
 	for pid, processes := range processData {
@@ -157,7 +157,7 @@ func PrepareCPUTimeSeriesChartData(processData map[int][]collector.Process) (str
 }
 
 // PrepareMemoryTimeSeriesChartData prepares and returns the chart data for memory usage as a JSON string.
-func PrepareMemoryTimeSeriesChartData(processData map[int][]collector.Process) (string, error) {
+func PrepareMemoryTimeSeriesChartData(processData map[int64][]collector.Process) (string, error) {
 	var datasets []ChartDataDataset
 	for pid, processes := range processData {
 		var dataPoints []DataPoint
