@@ -26,7 +26,7 @@ type ChartDataDataset struct {
 	Data            interface{} `json:"data"`
 	BackgroundColor string      `json:"backgroundColor,omitempty"`
 	BorderColor     string      `json:"borderColor,omitempty"`
-	Fill            bool        `json:"fill,omitempty"`
+	Fill            bool        `json:"fill"`
 	Tension         float64     `json:"tension,omitempty"`
 	PointStyle      string      `json:"pointStyle,omitempty"`
 	PointRadius     interface{} `json:"pointRadius,omitempty"` // Can be a static value or an array
