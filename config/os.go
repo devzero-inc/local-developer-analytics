@@ -3,6 +3,7 @@ package config
 import (
 	"lda/logging"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 )
@@ -63,19 +64,22 @@ func SetupShell() {
 	ShellLocation = os.Getenv("SHELL")
 	logging.Log.Info().Msgf("Trying to determine the shell: %s", ShellLocation)
 
-	switch ShellLocation {
-	case "/bin/bash":
+	shellType := path.Base(ShellLocation)
+
+	switch shellType {
+	case "bash":
 		logging.Log.Info().Msg("Running bash shell")
 		Shell = Bash
-	case "/bin/zsh":
+	case "zsh":
 		logging.Log.Info().Msg("Running zsh shell")
 		Shell = Zsh
-	case "/bin/fish":
+	case "fish":
 		logging.Log.Info().Msg("Running fish shell")
 		Shell = Fish
-	case "/bin/sh":
+	case "sh":
 		logging.Log.Info().Msg("Running sh shell")
 		Shell = Sh
+		// TODO: consider supporting "ash" as well.
 	default:
 		logging.Log.Fatal().Msg("Unsupported shell")
 		os.Exit(1)
