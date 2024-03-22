@@ -107,7 +107,7 @@ func PrepareCPUTimeSeriesChartData(processData map[int][]collector.Process) (str
 		}
 
 		datasets = append(datasets, ChartDataDataset{
-			Label:   fmt.Sprintf("%s - %d", processes[0].Name, pid), // Assumes Name is consistent within PID
+			Label:   fmt.Sprintf("%s - %d", processes[0].Name, pid),
 			Data:    dataPoints,
 			Fill:    false,
 			Tension: 0.1,
@@ -150,7 +150,7 @@ func PrepareCPUTimeSeriesChartData(processData map[int][]collector.Process) (str
 
 	chartJSON, err := json.Marshal(chartData)
 	if err != nil {
-		return "", err // Properly handle error
+		return "", err
 	}
 
 	return string(chartJSON), nil
@@ -167,7 +167,6 @@ func PrepareMemoryTimeSeriesChartData(processData map[int][]collector.Process) (
 				Y: proc.MemoryUsage,
 			})
 		}
-		// Sort dataPoints by X if necessary
 
 		datasets = append(datasets, ChartDataDataset{
 			Label:   fmt.Sprintf("%s - PID: %d", processes[0].Name, pid),
