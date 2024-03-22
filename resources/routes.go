@@ -16,33 +16,6 @@ import (
 //go:embed views/*
 var templateFS embed.FS
 
-type CommandLabelId struct {
-	Label string `json:"label"`
-	Id    int    `json:"id"`
-}
-
-type ChartConfig struct {
-	Type    string       `json:"type"`
-	Data    ChartData    `json:"data"`
-	Options ChartOptions `json:"options"`
-}
-
-type ChartData struct {
-	Ids      []int           `json:"ids"`
-	Labels   []string        `json:"labels"`
-	Datasets []ChartDataSets `json:"datasets"`
-}
-
-type ChartDataSets struct {
-	Label string  `json:"label"`
-	Data  []int64 `json:"data"`
-}
-
-type ChartOptions struct {
-	MaintainAspectRatio bool `json:"maintainAspectRatio"`
-	AspectRatio         int  `json:"aspectRatio"`
-}
-
 func Serve() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
@@ -74,9 +47,6 @@ func Serve() {
 			}
 		}
 
-		logging.Log.Info().Msgf("Reading data with start: %s, end: %s", start, end)
-		logging.Log.Info().Msgf("Reading data with start: %s, end: %s", startMillis, endMillis)
-
 		commands, err := collector.GetAllCommandsForPeriod(startMillis, endMillis)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -94,18 +64,22 @@ func Serve() {
 			return
 		}
 
-		// Serialize the commands and processes to JSON strings
-		commandsJSON, err := json.Marshal(commands)
+		commandsJson, err := PrepareCommandsExecutionTimeChartData(commands)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		processesJSON, err := json.Marshal(processes)
+		processResourceJson, err := PrepareProcessesResourceUsageChartData(processes)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		timeProcessesJSON, err := json.Marshal(timeProcesses)
+		cpuResourceJson, err := PrepareCPUTimeSeriesChartData(timeProcesses)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		memoryResourceJson, err := PrepareMemoryTimeSeriesChartData(timeProcesses)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -128,11 +102,12 @@ func Serve() {
 		}
 
 		if err := tmpl.Execute(w, map[string]interface{}{
-			"CommandsJSON":      string(commandsJSON),
-			"ProcessesJSON":     string(processesJSON),
-			"TimeProcessesJSON": string(timeProcessesJSON),
-			"StartTime":         start,
-			"EndTime":           end,
+			"CommandsJSON":         commandsJson,
+			"ProcessesJSON":        processResourceJson,
+			"CPUTimeSeriesJSON":    cpuResourceJson,
+			"MemoryTimeSeriesJSON": memoryResourceJson,
+			"StartTime":            start,
+			"EndTime":              end,
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -183,39 +158,7 @@ func Serve() {
 			return
 		}
 
-		var labels []string
-		var ids []int
-		var dataPoints []int64
-
-		for _, cmd := range commands {
-			labels = append(labels, cmd.Command)
-			ids = append(ids, int(cmd.Id))
-			dataPoints = append(dataPoints, cmd.ExecutionTime)
-		}
-
-		// Construct the chart data
-		chartDataSets := ChartDataSets{
-			Label: "Execution Time",
-			Data:  dataPoints,
-		}
-
-		chartData := ChartData{
-			Ids:      ids,
-			Labels:   labels,
-			Datasets: []ChartDataSets{chartDataSets},
-		}
-
-		chartConfig := ChartConfig{
-			Type: "pie",
-			Data: chartData,
-			Options: ChartOptions{
-				MaintainAspectRatio: true,
-				AspectRatio:         4,
-			},
-		}
-
-		// Serialize the commands to JSON strings
-		chartJSON, err := json.Marshal(chartConfig)
+		commandsJSON, err := json.Marshal(commands)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -238,9 +181,9 @@ func Serve() {
 		}
 
 		if err := tmpl.Execute(w, map[string]interface{}{
-			"ChartJSON": string(chartJSON),
-			"StartTime": start,
-			"EndTime":   end,
+			"CommandsJSON": string(commandsJSON),
+			"StartTime":    start,
+			"EndTime":      end,
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}

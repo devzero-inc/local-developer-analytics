@@ -49,179 +49,51 @@
 <script>
     (async function () {
         // Use the injected JSON data
-        const commandsData = JSON.parse(`{{.CommandsJSON}}`);
-        const processesData = JSON.parse(`{{.ProcessesJSON}}`);
-        const timeProcessesData = JSON.parse(`{{.TimeProcessesJSON}}`);
-        const cpuDataset = [];
-        const memoryDataset = [];
+        const commandChart = JSON.parse(`{{.CommandsJSON}}`);
+        const processesChart = JSON.parse(`{{.ProcessesJSON}}`);
+        const cpuTimeChart = JSON.parse(`{{.CPUTimeSeriesJSON}}`);
+        const memoryTimeChart = JSON.parse(`{{.MemoryTimeSeriesJSON}}`);
 
-        Object.keys(timeProcessesData).forEach(pid => {
-            // CPU Usage Data
-            const cpuUsageData = timeProcessesData[pid].map(process => ({
-                x: process.stored_time,
-                y: process.cpu_usage
-            })).sort((a, b) => a.x - b.x); // Sort by endTime
-            const processName = timeProcessesData[pid][0].name;
-            cpuDataset.push({
-                label: `${processName} - ${pid} CPU Usage`,
-                data: cpuUsageData,
-                fill: false,
-                tension: 0.1
-            });
-            // Used Memory Data
-            const usedMemoryData = timeProcessesData[pid].map(process => ({
-                x: process.stored_time,
-                y: process.memory_usage
-            })).sort((a, b) => a.x - b.x); // Sort by endTime
-            memoryDataset.push({
-                label: `${processName} ${pid} Used Memory`,
-                data: usedMemoryData,
-                fill: false,
-                tension: 0.1
-            });
-        });
+        console.log(commandChart)
+        console.log(processesChart)
+        console.log(cpuTimeChart)
+        console.log(memoryTimeChart)
 
-        new Chart(document.getElementById('memoryTimeSeries').getContext('2d'), {
-            type: 'line',
-            data: {
-                datasets: memoryDataset
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                },
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        title: {
-                            display: true,
-                            text: 'Time (milliseconds since epoch)'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Memory Usage (%)'
-                        }
-                    }
-                }
+        commandChart.options.onClick = function (event, elements) {
+            // 'elements' is an array of elements that are at the click position.
+            if (elements.length > 0) {
+                const firstElement = elements[0];
+
+                // Getting dataset index and index of the item within the dataset
+                const index = firstElement.index;
+
+                // Retrieve the data for the clicked item
+                const label = this.data.labels[index];
+
+                window.location.href = `/command?label=${label}`;
             }
-        });
+        };
 
-        new Chart(document.getElementById('cpuTimeSeries').getContext('2d'), {
-            type: 'line',
-            data: {
-                datasets: cpuDataset
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false
-                    },
+        processesChart.options.plugins.tooltip = {
+            callbacks: {
+                beforeTitle: function (context) {
+                    return context[0].raw.processName;
                 },
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        title: {
-                            display: true,
-                            text: 'Time (milliseconds since epoch)'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'CPU Usage (%)'
-                        }
-                    }
-                }
             }
-        });
+        };
 
-        if (commandsData != null) {
-            // Initialize the Commands Execution Time Chart as before
-            new Chart(document.getElementById('commandsExecutionTime'), {
-                type: 'pie',
-                data: {
-                    labels: commandsData.map(cmd => cmd.category),
-                    datasets: [{
-                        label: 'Execution Time (ms)',
-                        data: commandsData.map(cmd => cmd.execution_time),
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: true,
-                    aspectRatio: 2,
-                    onClick: function (event, elements) {
-                        // 'elements' is an array of elements that are at the click position.
-                        if (elements.length > 0) {
-                            const firstElement = elements[0];
-
-                            // Getting dataset index and index of the item within the dataset
-                            const index = firstElement.index;
-
-                            // Retrieve the data for the clicked item
-                            const label = this.data.labels[index];
-
-                            window.location.href = `/command?label=${label}`;
-                        }
-                    }
-                }
-            });
+        processesChart.data.datasets[0].pointRadius = function (context) {
+            return context.raw.r;
         }
 
-        if (processesData != null) {
-            new Chart(document.getElementById('processesResourceUsage'), {
-                type: 'scatter',
-                data: {
-                    datasets: [{
-                        label: 'Process Resource Usage',
-                        data: processesData.map(proc => ({
-                            x: proc.cpu_usage,
-                            y: proc.memory_usage,
-                            processName: proc.name,
-                            r: Math.sqrt(proc.cpu_usage * proc.memory_usage)
-                        })),
-                        // Enable custom point styles
-                        pointStyle: 'circle',
-                        // Apply the radius from the data point
-                        pointRadius: function (context) {
-                            return context.raw.r; // Use the calculated radius
-                        }
-                    }]
-                },
-                options: {
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'CPU Usage (%)'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Memory Usage (GB)'
-                            }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                beforeTitle: function (context) {
-                                    return context[0].raw.processName;
-                                },
-                            }
-                        }
-                    }
-                }
-            });
-        }
+        new Chart(document.getElementById('memoryTimeSeries').getContext('2d'), memoryTimeChart);
+
+        new Chart(document.getElementById('cpuTimeSeries').getContext('2d'), cpuTimeChart);
+
+        new Chart(document.getElementById('commandsExecutionTime'), commandChart);
+
+        new Chart(document.getElementById('processesResourceUsage'), processesChart);
+
     })();
 </script>
 </html>

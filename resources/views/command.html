@@ -39,21 +39,32 @@
 </body>
 <script>
     (async function () {
-        const chartData = JSON.parse(`{{.ChartJSON}}`);
+        const commandsData = JSON.parse(`{{.CommandsJSON}}`);
 
-        chartData.options.onClick = function (event, elements) {
-            // 'elements' is an array of elements that are at the click position.
-            if (elements.length > 0) {
-                const firstElement = elements[0];
-                const index = firstElement.index;
+        new Chart(document.getElementById('commandsExecutionTime'), {
+            type: 'pie',
+            data: {
+                labels: commandsData.map(cmd => cmd.category),
+                datasets: [{
+                    label: 'Execution Time (ms)',
+                    data: commandsData.map(cmd => cmd.execution_time),
+                }]
+            },
+            options: {
+                maintainAspectRatio: true,
+                aspectRatio: 2,
+                onClick: function (event, elements) {
+                    if (elements.length > 0) {
+                        const firstElement = elements[0];
+                        const index = firstElement.index;
 
-                console.log(chartData);
-                const commandInfo = chartData.data.ids[index];
+                        const commandInfo = chartData.data.ids[index];
 
-                window.location.href = `/overview?id=${commandInfo}`;
+                        window.location.href = `/overview?id=${commandInfo}`;
+                    }
+                }
             }
-        }
-        new Chart(document.getElementById('commandsExecutionTime'), chartData);
+        });
     })();
 </script>
 </html>
