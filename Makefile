@@ -27,6 +27,9 @@ CGO_LDFLAGS=-L/usr/local/lib
 
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+VERSION := 1.30.0
+BINARY_NAME := buf
+
 # count processors
 NPROCS:=1
 OS:=$(shell uname -s)
@@ -44,6 +47,7 @@ endif
 	build \
 	deps \
 	doc \
+	buf \
 	init \
 	run \
 	clean \
@@ -68,6 +72,11 @@ install: proto
 ## Install binary to /usr/local/bin
 install-global: proto install
 	@sudo cp ${GOPATH}/bin/$(TARGET) /usr/local/bin/$(TARGET)
+
+## Install buf binary
+buf:
+	curl -sSL "https://github.com/bufbuild/buf/releases/download/v${VERSION}/${BINARY_NAME}-$(shell uname -s)-$(shell uname -m)" -o "${BIN}/${BINARY_NAME}"
+	chmod +x $(BIN)/$(BINARY_NAME)
 
 ## Build and debug
 debug: build
