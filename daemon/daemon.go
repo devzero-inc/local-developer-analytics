@@ -155,7 +155,10 @@ func ReloadDaemon() error {
 
 // reloadLinuxDaemon reloads the daemon service on Linux using systemctl.
 func reloadLinuxDaemon() error {
-	cmd := exec.Command("systemctl", getSystemCtlUserOption(), "reload", ServicedName)
+	cmd := exec.Command("systemctl", "--user", "reload", ServicedName)
+	if config.IsRoot {
+		cmd = exec.Command("systemctl", "reload", ServicedName)
+	}
 
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -190,7 +193,10 @@ func startLinuxDaemon() error {
 		return fmt.Errorf("logind service is not available, and you need to be root to enable the daemon service, or enable logind service manually")
 	}
 
-	enableCmd := exec.Command("systemctl", getSystemCtlUserOption(), "enable", ServicedName)
+	enableCmd := exec.Command("systemctl", "--user", "enable", ServicedName)
+	if config.IsRoot {
+		enableCmd = exec.Command("systemctl", "enable", ServicedName)
+	}
 	var stderr bytes.Buffer
 	enableCmd.Stderr = &stderr
 
@@ -198,7 +204,10 @@ func startLinuxDaemon() error {
 		return fmt.Errorf("failed to enable daemon service: %v", stderr.String())
 	}
 
-	cmd := exec.Command("systemctl", getSystemCtlUserOption(), "start", ServicedName)
+	cmd := exec.Command("systemctl", "--user", "start", ServicedName)
+	if config.IsRoot {
+		cmd = exec.Command("systemctl", "start", ServicedName)
+	}
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
@@ -225,7 +234,10 @@ func startMacOSDaemon() error {
 
 // stopLinuxDaemon stops the daemon service on Linux
 func stopLinuxDaemon() error {
-	cmd := exec.Command("systemctl", getSystemCtlUserOption(), "stop", ServicedName)
+	cmd := exec.Command("systemctl", "--user", "stop", ServicedName)
+	if config.IsRoot {
+		cmd := exec.Command("systemctl", "stop", ServicedName)
+	}
 
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -252,15 +264,6 @@ func stopMacOSDaemon() error {
 	return nil
 }
 
-// getSystemCtlUserOption returns the user option for systemctl command, if the user is not root
-// then we need to use --user option
-func getSystemCtlUserOption() string {
-	if config.IsRoot {
-		return ""
-	}
-	return "--user"
-}
-
 // buildConfigurationPath builds the path to the daemon service configuration file, and the template
 func buildConfigurationPath() (string, string, error) {
 	var filePath string
@@ -270,12 +273,13 @@ func buildConfigurationPath() (string, string, error) {
 	case config.Linux:
 		servicePath := filepath.Join(config.HomeDir, UserServicedFilePath)
 
-		if !checkLogindService() {
-			if !config.IsRoot {
-				logging.Log.Info().
-					Msg("You need to be root to install the daemon service, or enable logind service manually")
-				return "", "", fmt.Errorf("logind service is not available")
-			}
+		if !checkLogindService() && !config.IsRoot {
+			logging.Log.Info().
+				Msg("You need to be root to install the daemon service, or enable logind service manually")
+			return "", "", fmt.Errorf("logind service is not available")
+		}
+
+		if config.IsRoot {
 			servicePath = RootServicedFilePath
 		}
 
