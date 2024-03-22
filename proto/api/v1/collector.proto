@@ -8,43 +8,49 @@ option go_package = "lda/gen/api/v1;gen";
 option java_multiple_files = true;
 option java_package = "gen.api.v1";
 
+// Define a message representing a command, including its metadata and timing information.
 message Command {
-  int64 id = 1;
-  string category = 2;
-  string command = 3;
-  string user = 4;
-  string directory = 5;
-  int64 execution_time = 6;
-  int64 start_time = 7;
-  int64 end_time = 8;
+  int64 id = 1; // Unique identifier for the command.
+  string category = 2; // Category of the command (e.g., system, user).
+  string command = 3; // The actual command string.
+  string user = 4; // The user who executed the command.
+  string directory = 5; // The directory from which the command was executed.
+  int64 execution_time = 6; // Execution time of the command in milliseconds.
+  int64 start_time = 7; // Start time of the command execution (Unix timestamp).
+  int64 end_time = 8; // End time of the command execution (Unix timestamp).
 }
 
+// Define a message representing a process, including its metadata and resource usage.
 message Process {
-  int64 id = 1;
-  int64 pid = 2;
-  string name = 3;
-  string status = 4;
-  int64 created_time = 5;
-  int64 stored_time = 6;
-  string os = 7;
-  string platform = 8;
-  string platform_family = 9;
-  double cpu_usage = 10;
-  double memory_usage = 11;
+  int64 id = 1; // Unique identifier for the process.
+  int64 pid = 2; // Process ID.
+  string name = 3; // Process name.
+  string status = 4; // Current status of the process (e.g., running, sleeping).
+  int64 created_time = 5; // Creation time of the process (Unix timestamp).
+  int64 stored_time = 6; // Time at which the process information was stored (Unix timestamp).
+  string os = 7; // Operating system the process is running on.
+  string platform = 8; // Platform information (e.g., Linux, Windows).
+  string platform_family = 9; // More detailed platform family information.
+  double cpu_usage = 10; // CPU usage percentage by the process.
+  double memory_usage = 11; // Memory usage by the process in megabytes.
 }
 
-// Request definitions
+// Requests to send collections of commands and processes.
 
+// Defines a request for sending a collection of commands.
 message SendCommandsRequest {
-  repeated Command commands = 1;
+  repeated Command commands = 1; // A list of commands.
 }
 
+// Defines a request for sending a collection of processes.
 message SendProcessesRequest {
-  repeated Process processes = 1;
+  repeated Process processes = 1; // A list of processes.
 }
 
-// Service definition
+// Defines the service that provides RPC methods for sending command and process collections.
 service CollectorService {
+  // RPC method for sending command data.
   rpc SendCommands(SendCommandsRequest) returns (google.protobuf.Empty);
+  // RPC method for sending process data.
   rpc SendProcesses(SendProcessesRequest) returns (google.protobuf.Empty);
 }
