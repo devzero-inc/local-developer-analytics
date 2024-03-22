@@ -43,7 +43,7 @@ func SetupConfig() {
 	var config = &Config{
 		Debug:                     false,
 		RemoteCollection:          false,
-		ProcessInterval:           120,
+		ProcessInterval:           3600,
 		CommandInterval:           1,
 		CommandIntervalMultiplier: 5,
 	}
