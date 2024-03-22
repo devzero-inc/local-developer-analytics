@@ -18,60 +18,56 @@ import (
 
 const SocketPath = "/tmp/lda.socket"
 
-var (
-	// Map to store ongoing commands
-	ongoingCommands = make(map[string]Command)
-	// Mutex to protect access to counter and conditionally starting/stopping collection
-	collectionMutex sync.Mutex
-	// Counter to track active commands
+type Collector struct {
+	socketPath            string
+	ongoingCommands       map[string]Command
+	collectionMutex       sync.Mutex
 	activeCommandsCounter int
-	// Context and cancel function to control the collection goroutine
-	collectionContext    context.Context
-	collectionCancelFunc context.CancelFunc = nil
-	// Indicate if the collection is currently running
-	isCollectionRunning bool = false
-)
+	collectionContext     context.Context
+	collectionCancelFunc  context.CancelFunc
+	isCollectionRunning   bool
+}
+
+// NewCollector creates a new collector instance
+func NewCollector(socketPath string) *Collector {
+	return &Collector{
+		socketPath:      socketPath,
+		ongoingCommands: make(map[string]Command),
+	}
+}
 
 // Collect starts the collection of command and system information
-func Collect() {
+func (c *Collector) Collect() {
 	logging.Log.Info().Msg("Collecting command and system information")
 
-	// Create a context that listens for the interrupt signal
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	var wg sync.WaitGroup
 
-	// Start collectSystemInformation in its own goroutine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		collectSystemInformation(
-			ctx,
-			time.Duration(config.AppConfig.ProcessInterval)*time.Second,
-			0,
-		)
+		c.collectSystemInformation(ctx, time.Duration(config.AppConfig.ProcessInterval)*time.Second, 0)
 	}()
 
-	// Start collectCommandInformation in its own goroutine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := collectCommandInformation(); err != nil {
+		if err := c.collectCommandInformation(); err != nil {
 			logging.Log.Error().Err(err).Msg("Failed to collect command information")
 			cancel()
 		}
 	}()
 
-	// Wait for both functions to complete
 	wg.Wait()
 
 	logging.Log.Info().Msg("Collection stopped")
 }
 
-func collectSystemInformation(ctx context.Context, initialDuration, increaseDuration time.Duration) {
+func (c *Collector) collectSystemInformation(ctx context.Context, initialDuration time.Duration, increaseDuration time.Duration) {
 	// Perform initial collection
-	if err := collectOnce(); err != nil {
+	if err := c.collectOnce(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to collect system information")
 	}
 
@@ -84,7 +80,7 @@ func collectSystemInformation(ctx context.Context, initialDuration, increaseDura
 			return
 		case <-time.After(currentDuration):
 			// Perform the collection on each tick
-			if err := collectOnce(); err != nil {
+			if err := c.collectOnce(); err != nil {
 				logging.Log.Error().Err(err).Msg("Failed to collect system information")
 			}
 			// Increase the duration for the next tick
@@ -94,7 +90,7 @@ func collectSystemInformation(ctx context.Context, initialDuration, increaseDura
 	}
 }
 
-func collectOnce() error {
+func (c *Collector) collectOnce() error {
 
 	logging.Log.Debug().Msg("Collecting process")
 
@@ -159,39 +155,39 @@ func collectOnce() error {
 	return nil
 }
 
-func onStartCommand() {
-	collectionMutex.Lock()
-	defer collectionMutex.Unlock()
+func (c *Collector) onStartCommand() {
+	c.collectionMutex.Lock()
+	defer c.collectionMutex.Unlock()
 
-	activeCommandsCounter++
+	c.activeCommandsCounter++
 	// If the collection is not running, start it with a timeout
-	if !isCollectionRunning {
+	if !c.isCollectionRunning {
 		logging.Log.Debug().Msg("Starting collection")
 		var timeoutDuration = 10 * time.Minute
-		collectionContext, collectionCancelFunc = context.WithTimeout(context.Background(), timeoutDuration)
-		go collectSystemInformation(
-			collectionContext,
+		c.collectionContext, c.collectionCancelFunc = context.WithTimeout(context.Background(), timeoutDuration)
+		go c.collectSystemInformation(
+			c.collectionContext,
 			time.Duration(config.AppConfig.CommandInterval)*time.Second,
-			time.Duration(config.AppConfig.CommandIntervalMultiplier),
+			time.Duration(config.AppConfig.CommandIntervalMultiplier)*time.Second,
 		)
-		isCollectionRunning = true
+		c.isCollectionRunning = true
 	}
 }
 
-func onEndCommand() {
-	collectionMutex.Lock()
-	defer collectionMutex.Unlock()
+func (c *Collector) onEndCommand() {
+	c.collectionMutex.Lock()
+	defer c.collectionMutex.Unlock()
 
-	activeCommandsCounter--
+	c.activeCommandsCounter--
 	// If there are no more active commands, stop the collection
-	if activeCommandsCounter == 0 && isCollectionRunning {
+	if c.activeCommandsCounter == 0 && c.isCollectionRunning {
 		logging.Log.Debug().Msg("Stopping collection")
-		collectionCancelFunc()
-		isCollectionRunning = false
+		c.collectionCancelFunc()
+		c.isCollectionRunning = false
 	}
 }
 
-func collectCommandInformation() error {
+func (c *Collector) collectCommandInformation() error {
 	if err := os.RemoveAll(SocketPath); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to clean up existing socket")
 		return err
@@ -213,17 +209,17 @@ func collectCommandInformation() error {
 
 		// Handle each connection in a separate goroutine
 		go func() {
-			if err := handleSocketCollection(conn); err != nil {
+			if err := c.handleSocketCollection(conn); err != nil {
 				logging.Log.Error().Err(err).Msg("Error handling socket collection")
 			}
 		}()
 	}
 }
 
-func handleSocketCollection(c net.Conn) error {
-	defer c.Close()
+func (c *Collector) handleSocketCollection(con net.Conn) error {
+	defer con.Close()
 	var buf [1024]byte
-	n, err := c.Read(buf[:])
+	n, err := con.Read(buf[:])
 	if err != nil {
 		logging.Log.Error().Err(err).Msg("Error reading from socket")
 		return err
@@ -240,11 +236,11 @@ func handleSocketCollection(c net.Conn) error {
 	}
 
 	if parts[0] == "start" {
-		if err := handleStartCommand(parts); err != nil {
+		if err := c.handleStartCommand(parts); err != nil {
 			logging.Log.Error().Err(err).Msg("Error handling start command")
 		}
 	} else if parts[0] == "end" {
-		if err := handleEndCommand(parts); err != nil {
+		if err := c.handleEndCommand(parts); err != nil {
 			logging.Log.Error().Err(err).Msg("Error handling end command")
 		}
 	} else {
@@ -255,7 +251,7 @@ func handleSocketCollection(c net.Conn) error {
 	return nil
 }
 
-func handleStartCommand(parts []string) error {
+func (c *Collector) handleStartCommand(parts []string) error {
 	if !IsCommandAcceptable(parts[1]) {
 		logging.Log.Debug().Msg("Command is not acceptable")
 		return fmt.Errorf("command is not acceptable")
@@ -271,14 +267,14 @@ func handleStartCommand(parts []string) error {
 		StartTime: time.Now().UnixMilli(),
 	}
 
-	ongoingCommands[parts[4]] = command
+	c.ongoingCommands[parts[4]] = command
 
-	onStartCommand()
+	c.onStartCommand()
 
 	return nil
 }
 
-func handleEndCommand(parts []string) error {
+func (c *Collector) handleEndCommand(parts []string) error {
 
 	if !IsCommandAcceptable(parts[1]) {
 		logging.Log.Debug().Msg("Command is not acceptable")
@@ -287,7 +283,7 @@ func handleEndCommand(parts []string) error {
 
 	logging.Log.Debug().Msgf("Parsing command: %s", parts[0])
 
-	if command, exists := ongoingCommands[parts[4]]; exists {
+	if command, exists := c.ongoingCommands[parts[4]]; exists {
 		command.EndTime = time.Now().UnixMilli()
 		command.ExecutionTime = command.EndTime - command.StartTime
 
@@ -295,8 +291,8 @@ func handleEndCommand(parts []string) error {
 			logging.Log.Error().Err(err).Msg("Failed to insert command")
 			return err
 		}
-		delete(ongoingCommands, parts[4])
-		onEndCommand()
+		delete(c.ongoingCommands, parts[4])
+		c.onEndCommand()
 	} else {
 		logging.Log.Error().Msg("Matching start command not found")
 		return fmt.Errorf("matching start command not found")

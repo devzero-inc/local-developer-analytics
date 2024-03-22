@@ -17,5 +17,6 @@ var (
 )
 
 func collect(_ *cobra.Command, _ []string) {
-	collector.Collect()
+	collectorInstance := collector.NewCollector(collector.SocketPath)
+	collectorInstance.Collect()
 }
