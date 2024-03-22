@@ -54,11 +54,6 @@
         const cpuTimeChart = JSON.parse(`{{.CPUTimeSeriesJSON}}`);
         const memoryTimeChart = JSON.parse(`{{.MemoryTimeSeriesJSON}}`);
 
-        console.log(commandChart)
-        console.log(processesChart)
-        console.log(cpuTimeChart)
-        console.log(memoryTimeChart)
-
         commandChart.options.onClick = function (event, elements) {
             // 'elements' is an array of elements that are at the click position.
             if (elements.length > 0) {

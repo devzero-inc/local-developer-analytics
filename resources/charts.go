@@ -16,6 +16,7 @@ type ChartData struct {
 
 // ChartDataData holds the datasets and labels for the chart.
 type ChartDataData struct {
+	Ids      []int              `json:"ids"`
 	Datasets []ChartDataDataset `json:"datasets"`
 	Labels   []string           `json:"labels,omitempty"`
 }
@@ -45,15 +46,15 @@ type DataPoint struct {
 type ChartOptions struct {
 	Scales              *ChartScales  `json:"scales,omitempty"`
 	Plugins             *ChartPlugins `json:"plugins,omitempty"`
-	MaintainAspectRatio bool          `json:"maintainAspectRatio,omitempty"`
-	Responsive          bool          `json:"responsive,omitempty"`
+	MaintainAspectRatio bool          `json:"maintainAspectRatio"`
+	Responsive          bool          `json:"responsive"`
 	AspectRatio         int           `json:"aspectRatio,omitempty"`
 }
 
 // ChartScales defines the axes of the chart, including their types and specific configurations.
 type ChartScales struct {
-	XAxes []ChartAxisOptions `json:"xAxes,omitempty"`
-	YAxes []ChartAxisOptions `json:"yAxes,omitempty"`
+	XAxes ChartAxisOptions `json:"x,omitempty"`
+	YAxes ChartAxisOptions `json:"y,omitempty"`
 }
 
 // ChartAxisOptions represents configuration options for a single axis in the chart.
@@ -62,7 +63,7 @@ type ChartAxisOptions struct {
 	Position    string            `json:"position,omitempty"`
 	Time        *ChartTimeOptions `json:"time,omitempty"`
 	Title       *ChartAxisTitle   `json:"title,omitempty"`
-	BeginAtZero bool              `json:"beginAtZero,omitempty"`
+	BeginAtZero bool              `json:"beginAtZero"`
 }
 
 // ChartTimeOptions is used for axes that represent time, allowing for the specification of time units and formats.
@@ -89,7 +90,7 @@ type ChartLegendOptions struct {
 
 // ChartTooltipOptions configures the chart's tooltips.
 type ChartTooltipOptions struct {
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled bool `json:"enabled"`
 }
 
 // PrepareCPUTimeSeriesChartData prepares the data for the CPU Time Series chart.
@@ -121,23 +122,19 @@ func PrepareCPUTimeSeriesChartData(processData map[int][]collector.Process) (str
 		},
 		Options: ChartOptions{
 			Scales: &ChartScales{
-				XAxes: []ChartAxisOptions{
-					{
-						Type:     "linear",
-						Position: "bottom",
-						Title: &ChartAxisTitle{
-							Display: true,
-							Text:    "Time",
-						},
+				XAxes: ChartAxisOptions{
+					Type:     "linear",
+					Position: "bottom",
+					Title: &ChartAxisTitle{
+						Display: true,
+						Text:    "Time",
 					},
 				},
-				YAxes: []ChartAxisOptions{
-					{
-						BeginAtZero: true,
-						Title: &ChartAxisTitle{
-							Display: true,
-							Text:    "CPU Usage (%)",
-						},
+				YAxes: ChartAxisOptions{
+					BeginAtZero: true,
+					Title: &ChartAxisTitle{
+						Display: true,
+						Text:    "CPU Usage (%)",
 					},
 				},
 			},
@@ -146,7 +143,7 @@ func PrepareCPUTimeSeriesChartData(processData map[int][]collector.Process) (str
 					Display: false,
 				},
 			},
-			MaintainAspectRatio: false,
+			MaintainAspectRatio: true,
 			Responsive:          true,
 		},
 	}
@@ -187,21 +184,21 @@ func PrepareMemoryTimeSeriesChartData(processData map[int][]collector.Process) (
 		},
 		Options: ChartOptions{
 			Scales: &ChartScales{
-				XAxes: []ChartAxisOptions{{
+				XAxes: ChartAxisOptions{
 					Type:     "linear",
 					Position: "bottom",
 					Title: &ChartAxisTitle{
 						Display: true,
 						Text:    "Time",
 					},
-				}},
-				YAxes: []ChartAxisOptions{{
+				},
+				YAxes: ChartAxisOptions{
 					BeginAtZero: true,
 					Title: &ChartAxisTitle{
 						Display: true,
 						Text:    "Memory Usage",
 					},
-				}},
+				},
 			},
 			Plugins: &ChartPlugins{
 				Legend: &ChartLegendOptions{
@@ -211,7 +208,8 @@ func PrepareMemoryTimeSeriesChartData(processData map[int][]collector.Process) (
 					Enabled: true,
 				},
 			},
-			Responsive: true,
+			MaintainAspectRatio: true,
+			Responsive:          true,
 		},
 	}
 
@@ -225,16 +223,15 @@ func PrepareMemoryTimeSeriesChartData(processData map[int][]collector.Process) (
 
 // PrepareCommandsExecutionTimeChartData prepares and returns the chart data for the command's execution time distribution.
 func PrepareCommandsExecutionTimeChartData(commands []collector.Command) (string, error) {
-	categoryExecutionTimeMap := make(map[string]int64)
-	for _, cmd := range commands {
-		categoryExecutionTimeMap[cmd.Category] += cmd.ExecutionTime
-	}
 
 	var labels []string
 	var data []int64
-	for category, executionTime := range categoryExecutionTimeMap {
-		labels = append(labels, category)
-		data = append(data, executionTime)
+	var ids []int
+
+	for _, cmd := range commands {
+		labels = append(labels, cmd.Command)
+		ids = append(ids, int(cmd.Id))
+		data = append(data, cmd.ExecutionTime)
 	}
 
 	dataset := ChartDataDataset{
@@ -246,6 +243,7 @@ func PrepareCommandsExecutionTimeChartData(commands []collector.Command) (string
 	chartData := ChartData{
 		Type: "pie",
 		Data: ChartDataData{
+			Ids:      ids,
 			Labels:   labels,
 			Datasets: []ChartDataDataset{dataset},
 		},
@@ -263,7 +261,53 @@ func PrepareCommandsExecutionTimeChartData(commands []collector.Command) (string
 
 	chartJSON, err := json.Marshal(chartData)
 	if err != nil {
-		return "", err // Proper error handling
+		return "", err
+	}
+
+	return string(chartJSON), nil
+}
+
+// PrepareCommandCategoriesExecutionTimeChartData prepares and returns the chart data for the command's execution time distribution.
+func PrepareCommandCategoriesExecutionTimeChartData(commands []collector.Command) (string, error) {
+
+	var labels []string
+	var data []int64
+	var ids []int
+
+	for _, cmd := range commands {
+		labels = append(labels, cmd.Category)
+		ids = append(ids, int(cmd.Id))
+		data = append(data, cmd.ExecutionTime)
+	}
+
+	dataset := ChartDataDataset{
+		Label:       "Execution Time (ms)",
+		Data:        data,
+		BorderWidth: 1,
+	}
+
+	chartData := ChartData{
+		Type: "pie",
+		Data: ChartDataData{
+			Ids:      ids,
+			Labels:   labels,
+			Datasets: []ChartDataDataset{dataset},
+		},
+		Options: ChartOptions{
+			Responsive:          true,
+			AspectRatio:         2,
+			MaintainAspectRatio: true,
+			Plugins: &ChartPlugins{
+				Legend: &ChartLegendOptions{
+					Display: true,
+				},
+			},
+		},
+	}
+
+	chartJSON, err := json.Marshal(chartData)
+	if err != nil {
+		return "", err
 	}
 
 	return string(chartJSON), nil
@@ -299,18 +343,18 @@ func PrepareProcessesResourceUsageChartData(processes []collector.Process) (stri
 		},
 		Options: ChartOptions{
 			Scales: &ChartScales{
-				XAxes: []ChartAxisOptions{{
+				XAxes: ChartAxisOptions{
 					Title: &ChartAxisTitle{
 						Display: true,
 						Text:    "CPU Usage (%)",
 					},
-				}},
-				YAxes: []ChartAxisOptions{{
+				},
+				YAxes: ChartAxisOptions{
 					Title: &ChartAxisTitle{
 						Display: true,
 						Text:    "Memory Usage (GB)",
 					},
-				}},
+				},
 			},
 			Plugins: &ChartPlugins{
 				Legend: &ChartLegendOptions{
@@ -326,7 +370,7 @@ func PrepareProcessesResourceUsageChartData(processes []collector.Process) (stri
 
 	chartJSON, err := json.Marshal(chartData)
 	if err != nil {
-		return "", err // Proper error handling
+		return "", err
 	}
 
 	return string(chartJSON), nil
