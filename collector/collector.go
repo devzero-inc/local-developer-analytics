@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"lda/config"
 	"lda/logging"
 	"net"
 	"os"
@@ -45,7 +46,11 @@ func Collect() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		collectSystemInformation(ctx, 120*time.Second, 0)
+		collectSystemInformation(
+			ctx,
+			time.Duration(config.AppConfig.ProcessInterval)*time.Second,
+			0,
+		)
 	}()
 
 	// Start collectCommandInformation in its own goroutine
@@ -164,7 +169,11 @@ func onStartCommand() {
 		logging.Log.Debug().Msg("Starting collection")
 		var timeoutDuration = 10 * time.Minute
 		collectionContext, collectionCancelFunc = context.WithTimeout(context.Background(), timeoutDuration)
-		go collectSystemInformation(collectionContext, 1*time.Second, 5)
+		go collectSystemInformation(
+			collectionContext,
+			time.Duration(config.AppConfig.CommandInterval)*time.Second,
+			time.Duration(config.AppConfig.CommandIntervalMultiplier),
+		)
 		isCollectionRunning = true
 	}
 }
