@@ -142,6 +142,7 @@ func (c *Collector) collectOnce() error {
 		}
 
 		// Adjust the Process struct to accept ExecutionTime as int64 if not already
+		// TODO: why not just use gen.Process directly, rather than making an intermediate struct?
 		processInfo := Process{
 			PID:            int64(p.Pid),
 			Name:           name,
@@ -156,7 +157,7 @@ func (c *Collector) collectOnce() error {
 		}
 
 		InsertProcess(processInfo)
-		processInfos = append(processInfos, processInfo)
+		processInfos = append(processInfos, processInfo) // FIXME this seems unused?
 
 		if c.client != nil {
 			processMetrics = append(processMetrics, MapProcessToProto(processInfo))
@@ -167,6 +168,8 @@ func (c *Collector) collectOnce() error {
 		if err := c.client.SendProcesses(processMetrics); err != nil {
 			logging.Log.Error().Err(err).Msg("Failed to send processes")
 		}
+	} else {
+		logging.Log.Error().Msg("Client unable to connect to server, process metrics will not be exported.")
 	}
 
 	return nil
@@ -225,6 +228,7 @@ func (c *Collector) collectCommandInformation() error {
 		}
 
 		// Handle each connection in a separate goroutine
+		// TODO: consider adding a limit to the number of concurrent connections
 		go func() {
 			if err := c.handleSocketCollection(conn); err != nil {
 				logging.Log.Error().Err(err).Msg("Error handling socket collection")
@@ -235,7 +239,7 @@ func (c *Collector) collectCommandInformation() error {
 
 func (c *Collector) handleSocketCollection(con net.Conn) error {
 	defer con.Close()
-	var buf [1024]byte
+	var buf [1024]byte // TODO: print warning if buffer is too small for input
 	n, err := con.Read(buf[:])
 	if err != nil {
 		logging.Log.Error().Err(err).Msg("Error reading from socket")
