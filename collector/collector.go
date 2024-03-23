@@ -285,7 +285,9 @@ func (c *Collector) handleStartCommand(parts []string) error {
 		Command:   parts[1],
 		Directory: parts[2],
 		User:      parts[3],
-		StartTime: time.Now().UnixMilli(),
+		StartTime: time.Now().UnixMilli(), // TODO: consider that go routines add some small overhead. It might be worth
+		// encoding the time in the command itself in the shell script, in case it takes a while for the command
+		// to get processed.
 	}
 
 	c.ongoingCommands[parts[4]] = command
