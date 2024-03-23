@@ -9,12 +9,6 @@ import (
 	"os"
 )
 
-var (
-	Version = "0.0.0"
-	Commit  = "xxx"
-	Branch  = "undefined"
-)
-
 // init function will be called before main
 func init() {
 
