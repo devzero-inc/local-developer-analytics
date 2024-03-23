@@ -18,6 +18,7 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
+// TODO move this to /var/run or other appropriate location based on OS.
 const SocketPath = "/tmp/lda.socket"
 
 // Collector collects command and system information
