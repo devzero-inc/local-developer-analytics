@@ -9,7 +9,7 @@ PROTO_LOCATION := $(shell find proto -iname "proto" -exec echo "-I="{} \;)
 PACKAGE = lda
 TARGET = lda
 
-VERSION?=0.2.0
+VERSION=$(shell git describe --tags --abbrev=0 || echo "x.x.x")
 COMMIT=$(shell git rev-parse --short HEAD)
 BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 
@@ -20,14 +20,14 @@ UNAME := $(shell uname | tr A-Z a-z )
 DOCKER_REGISTRY := registry.gitlab.codilas.com/codilas/devzero/lda
 
 # Setup the -ldflags option for go build here, interpolate the variable values
-LDFLAGS = -s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT}${CHANGES} -X main.Branch=${BRANCH}
+LDFLAGS = -s -w -X config.Version=${VERSION} -X config.Commit=${COMMIT}${CHANGES} -X config.Branch=${BRANCH}
 
 CGO_CFLAGS=-I/usr/local/include
 CGO_LDFLAGS=-L/usr/local/lib
 
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-VERSION := 1.30.0
+BUF_VERSION := 1.30.0
 BUF_BINARY_NAME := buf
 
 # count processors
@@ -75,8 +75,8 @@ install-global: proto install
 
 
 # Check if buf is installed and version is correct, enabled smarter handling of buf rule.
-BUF_VERSION := $(shell if command -v $(BIN)/$(BUF_BINARY_NAME) >/dev/null; then $(BIN)/$(BUF_BINARY_NAME) --version; fi)
-VERSION_MATCH := $(findstring ${VERSION},$(BUF_VERSION))
+BUF_INSTALLED_VERSION := $(shell if command -v $(BIN)/$(BUF_BINARY_NAME) >/dev/null; then $(BIN)/$(BUF_BINARY_NAME) --version; fi)
+VERSION_MATCH := $(findstring ${BUF_INSTALLED_VERSION},$(BUF_VERSION))
 ## Install buf binary
 buf:
 	@if [ -x "$(BIN)/$(BUF_BINARY_NAME)" ] && [ -n "$(VERSION_MATCH)" ]; then \

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"lda/config"
 
 	"github.com/spf13/cobra"
 )
@@ -17,5 +18,5 @@ var (
 )
 
 func version(_ *cobra.Command, _ []string) {
-	fmt.Println("LDA v0.0.1")
+	fmt.Printf("LDA v%s\n", config.Version)
 }
