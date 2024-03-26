@@ -18,7 +18,8 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
-// TODO move this to /var/run or other appropriate location based on OS.
+// TODO move this to /var/run or other appropriate location based on OS,
+// TODO /var/run is causing come issues with permisisons os have to explore a bit more.
 const SocketPath = "/tmp/lda.socket"
 
 // Collector collects command and system information
@@ -108,7 +109,6 @@ func (c *Collector) collectOnce() error {
 		return err
 	}
 
-	var processInfos []Process
 	var processMetrics []*gen.Process
 	for _, p := range processes {
 		createTime, err := p.CreateTime()
@@ -141,8 +141,7 @@ func (c *Collector) collectOnce() error {
 			continue
 		}
 
-		// Adjust the Process struct to accept ExecutionTime as int64 if not already
-		// TODO: why not just use gen.Process directly, rather than making an intermediate struct?
+		// TODO: migrate to gen.Process directly, rather than making an intermediate struct
 		processInfo := Process{
 			PID:            int64(p.Pid),
 			Name:           name,
@@ -157,7 +156,6 @@ func (c *Collector) collectOnce() error {
 		}
 
 		InsertProcess(processInfo)
-		processInfos = append(processInfos, processInfo) // FIXME this seems unused?
 
 		if c.client != nil {
 			processMetrics = append(processMetrics, MapProcessToProto(processInfo))
@@ -280,14 +278,13 @@ func (c *Collector) handleStartCommand(parts []string) error {
 
 	logging.Log.Debug().Msgf("Parsing command: %s", parts[0])
 
+	// TODO: migrate to gen.Command directly, rather than making an intermediate struct
 	command := Command{
 		Category:  ParseCommand(parts[1]),
 		Command:   parts[1],
 		Directory: parts[2],
 		User:      parts[3],
-		StartTime: time.Now().UnixMilli(), // TODO: consider that go routines add some small overhead. It might be worth
-		// encoding the time in the command itself in the shell script, in case it takes a while for the command
-		// to get processed.
+		StartTime: time.Now().UnixMilli(), // TODO: there are some issues with sending time through shell because of ms support on MAC, explore more
 	}
 
 	c.ongoingCommands[parts[4]] = command

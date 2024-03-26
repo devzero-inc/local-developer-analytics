@@ -35,8 +35,6 @@ func NewClient(config Config) (*Client, error) {
 	creds := grpc.WithTransportCredentials(insecure.NewCredentials())
 	if config.SecureConnection {
 		if config.CertFile != "" {
-			// TODO: check if we will have any issues with CORS, consider allowing setting the SAN hostname
-			// for the server to use the same hostname as the certificate
 			tlsFromFile, err := credentials.NewClientTLSFromFile(config.CertFile, "")
 			if err != nil {
 				return nil, fmt.Errorf("failed to create TLS credentials: %w", err)

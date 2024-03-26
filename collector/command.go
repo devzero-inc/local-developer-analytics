@@ -20,18 +20,6 @@ type Command struct {
 	EndTime       int64  `json:"end_time" db:"end_time"`
 }
 
-// GetAllCommands fetches all commands from the database
-// TODO: remove, unused? or keep for tests.
-func GetAllCommands() ([]Command, error) {
-	var commands []Command
-	if err := database.DB.Select(&commands, "SELECT * FROM commands"); err != nil {
-		logging.Log.Err(err).Msg("Failed to get all commands")
-		return nil, err
-	}
-
-	return commands, nil
-}
-
 // GetCommandById fetches a command by its ID
 func GetCommandById(id int64) (*Command, error) {
 	var command Command
@@ -72,7 +60,6 @@ func GetAllCommandsForCategoryForPeriod(category string, start int64, end int64)
               WHERE category = ? AND start_time >= ? AND start_time <= ? 
               GROUP BY command 
               ORDER BY command ASC, SUM(execution_time) DESC`
-	// TODO: consider adding some high limit like 10,000 to be kinder to the browser.
 
 	if err := database.DB.Select(&commands, query, category, start, end); err != nil {
 		logging.Log.Err(err).Msg("Failed to get aggregated commands with start and end times")
