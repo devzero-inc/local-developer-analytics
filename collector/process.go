@@ -22,17 +22,6 @@ type Process struct {
 	MemoryUsage    float64 `json:"memory_usage" db:"memory_usage"`
 }
 
-// GetAllProcesses fetches all processes from the database
-func GetAllProcesses() ([]Process, error) {
-	var processes []Process
-	if err := database.DB.Select(&processes, "SELECT * FROM processes"); err != nil {
-		logging.Log.Err(err).Msg("Failed to get all processes")
-		return nil, err
-	}
-
-	return processes, nil
-}
-
 // GetAllProcessesForPeriod fetches all processes for a given period
 func GetAllProcessesForPeriod(start int64, end int64) ([]Process, error) {
 	var processes []Process
