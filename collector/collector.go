@@ -35,6 +35,7 @@ type IntervalConfig struct {
 	ProcessInterval           time.Duration
 	CommandInterval           time.Duration
 	CommandIntervalMultiplier time.Duration
+	MaxConcurrentCommands     int
 }
 
 // collectionConfig contains the configuration for the collection process
@@ -233,26 +234,46 @@ func (c *Collector) collectCommandInformation() error {
 	}
 	defer listener.Close()
 
+	// Limit the number of concurrent goroutines handling connections
+	semaphore := make(chan struct{}, c.intervalConfig.MaxConcurrentCommands)
+
+	// Context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		<-ctx.Done() // Wait for context cancellation
+		listener.Close()
+	}()
+
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			c.logger.Error().Err(err).Msg("Failed to accept connection")
-			continue
+			select {
+			case <-ctx.Done():
+				// If the context is canceled, stop accepting new connections
+				return nil
+			default:
+				c.logger.Error().Err(err).Msg("Failed to accept connection")
+				continue
+			}
 		}
 
-		// Handle each connection in a separate goroutine
-		// TODO: consider adding a limit to the number of concurrent connections
-		go func() {
+		semaphore <- struct{}{} // Acquire
+		go func(conn net.Conn) {
+			defer func() {
+				<-semaphore // Release
+			}()
 			if err := c.handleSocketCollection(conn); err != nil {
 				c.logger.Error().Err(err).Msg("Error handling socket collection")
 			}
-		}()
+		}(conn)
 	}
 }
 
 func (c *Collector) handleSocketCollection(con net.Conn) error {
 	defer con.Close()
-	var buf [1024]byte // TODO: print warning if buffer is too small for input
+	var buf [1024]byte
 	n, err := con.Read(buf[:])
 	if err != nil {
 		c.logger.Error().Err(err).Msg("Error reading from socket")

@@ -15,6 +15,8 @@ type Config struct {
 	CommandInterval int `mapstructure:"command_interval"`
 	// CommandIntervalMultiplier multiplier for the command interval - defaults to 5 seconds
 	CommandIntervalMultiplier int `mapstructure:"command_interval_multiplier"`
+	// MaxConcurrentCommands maximum number of concurrent commands to collect - defaults to 20
+	MaxConcurrentCommands int `mapstructure:"max_concurrent_commands"`
 	// RemoteCollection flag to enable remote collection - defaults to false
 	RemoteCollection bool `mapstructure:"remote_collection"`
 	// ServerAddress host to connect to for remote collection
@@ -46,6 +48,7 @@ func SetupConfig() {
 		ProcessInterval:           3600,
 		CommandInterval:           1,
 		CommandIntervalMultiplier: 5,
+		MaxConcurrentCommands:     20,
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
