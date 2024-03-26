@@ -5,6 +5,7 @@ import (
 	"lda/collector"
 	"lda/config"
 	"lda/logging"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -37,9 +38,17 @@ func collect(_ *cobra.Command, _ []string) {
 		}
 	}
 
+	intervalConfig := collector.IntervalConfig{
+		ProcessInterval:           time.Duration(config.AppConfig.ProcessInterval),
+		CommandInterval:           time.Duration(config.AppConfig.CommandInterval),
+		CommandIntervalMultiplier: time.Duration(config.AppConfig.CommandIntervalMultiplier),
+	}
+
 	collectorInstance := collector.NewCollector(
 		collector.SocketPath,
 		grpcClient,
+		logging.Log,
+		intervalConfig,
 	)
 	collectorInstance.Collect()
 }
