@@ -42,6 +42,7 @@ func collect(_ *cobra.Command, _ []string) {
 		ProcessInterval:           time.Duration(config.AppConfig.ProcessInterval),
 		CommandInterval:           time.Duration(config.AppConfig.CommandInterval),
 		CommandIntervalMultiplier: time.Duration(config.AppConfig.CommandIntervalMultiplier),
+		MaxConcurrentCommands:     config.AppConfig.MaxConcurrentCommands,
 	}
 
 	collectorInstance := collector.NewCollector(
