@@ -6,18 +6,8 @@ on:
       - 'v*'
 
 jobs:
-
-  build:
+  build-linux:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - target: build-linux
-            suffix: linux-amd64
-          - target: build-mac
-            suffix: darwin-amd64
-          - target: build-mac-m1
-            suffix: darwin-arm64
     steps:
       - uses: actions/checkout@v4
       - uses: bufbuild/buf-setup-action@v1
@@ -26,32 +16,54 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.21.4'
-      
-      - name: Build Binary
+          
+      - name: Build Binary for Linux
         run: |
-          make ${{ matrix.target }}
-          zip "${{ env.TARGET }}-${{ matrix.suffix }}.zip" "${{ env.TARGET }}"
+          make build
+          zip "lda-linux-amd64.zip" "lda"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.TARGET }}-${{ matrix.suffix }}.zip
-          path: ${{ env.TARGET }}-${{ matrix.suffix }}.zip
+          name: lda-linux-amd64.zip
+          path: lda-linux-amd64.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+
+      - name: Build Binary for macOS Intel
+        run: |
+          make build
+          zip "lda-darwin-arm64.zip" "lda"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lda-darwin-arm64.zip
+          path: lda-darwin-arm64.zip
 
   create-release:
-    needs: build
+    needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           path: artifacts/
 
       - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.zip
+          files: |
+            artifacts/lda-darwin-arm64.zip/lda-darwin-arm64.zip
+            artifacts/lda-linux-amd64.zip/lda-linux-amd64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
