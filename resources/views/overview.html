@@ -21,29 +21,47 @@
 </body>
 <script>
     (async function () {
-        // Use the injected JSON data
-        const processesChart = JSON.parse(`{{.ProcessesJSON}}`);
-        const cpuTimeChart = JSON.parse(`{{.CPUTimeSeriesJSON}}`);
-        const memoryTimeChart = JSON.parse(`{{.MemoryTimeSeriesJSON}}`);
+        const processData = `{{.ProcessesJSON}}`;
+        const cpuData = `{{.CPUTimeSeriesJSON}}`;
+        const memoryData = `{{.MemoryTimeSeriesJSON}}`;
 
-        processesChart.options.plugins.tooltip = {
-            callbacks: {
-                beforeTitle: function (context) {
-                    return context[0].raw.processName;
-                },
+        console.log(processData);
+
+        function isDataEmpty(data) {
+            try {
+                const parsed = JSON.parse(data);
+                return parsed.data.datasets.length === 0 || parsed.data.datasets.some(ds => ds.data.length === 0);
+            } catch(e) {
+                return true;
             }
-        };
-
-        processesChart.data.datasets[0].pointRadius = function (context) {
-            return context.raw.r;
         }
 
-        new Chart(document.getElementById('memoryTimeSeries').getContext('2d'), memoryTimeChart);
+        function renderChartOrMessage(containerId, chartData, message = "No data available") {
+            if (isDataEmpty(chartData)) {
+                document.getElementById(containerId).parentElement.innerHTML = `<p class="text-center text-gray-500">${message}</p>`;
+            } else {
+                const parsedData = JSON.parse(chartData);
+                if(containerId === 'processesResourceUsage') {
+                    parsedData.options.plugins.tooltip = {
+                        callbacks: {
+                            beforeTitle: function (context) {
+                                return context[0].raw.processName;
+                            },
+                        }
+                    };
 
-        new Chart(document.getElementById('cpuTimeSeries').getContext('2d'), cpuTimeChart);
+                    parsedData.data.datasets[0].pointRadius = function (context) {
+                        return context.raw.r;
+                    };
+                }
 
-        new Chart(document.getElementById('processesResourceUsage'), processesChart);
+                new Chart(document.getElementById(containerId).getContext('2d'), parsedData);
+            }
+        }
 
+        renderChartOrMessage('processesResourceUsage', processData);
+        renderChartOrMessage('cpuTimeSeries', cpuData);
+        renderChartOrMessage('memoryTimeSeries', memoryData);
     })();
 </script>
 </html>

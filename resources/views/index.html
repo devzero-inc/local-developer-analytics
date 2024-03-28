@@ -49,46 +49,63 @@
 <script>
     (async function () {
         // Use the injected JSON data
-        const commandChart = JSON.parse(`{{.CommandsJSON}}`);
-        const processesChart = JSON.parse(`{{.ProcessesJSON}}`);
-        const cpuTimeChart = JSON.parse(`{{.CPUTimeSeriesJSON}}`);
-        const memoryTimeChart = JSON.parse(`{{.MemoryTimeSeriesJSON}}`);
+        const commandChart = `{{.CommandsJSON}}`;
+        const processesChart = `{{.ProcessesJSON}}`;
+        const cpuTimeChart = `{{.CPUTimeSeriesJSON}}`;
+        const memoryTimeChart = `{{.MemoryTimeSeriesJSON}}`;
 
-        commandChart.options.onClick = function (event, elements) {
-            // 'elements' is an array of elements that are at the click position.
-            if (elements.length > 0) {
-                const firstElement = elements[0];
-
-                // Getting dataset index and index of the item within the dataset
-                const index = firstElement.index;
-
-                // Retrieve the data for the clicked item
-                const label = this.data.labels[index];
-
-                window.location.href = `/command?label=${label}`;
+        function isDataEmpty(data) {
+            try {
+                const parsed = JSON.parse(data);
+                return parsed.data.datasets.length === 0 || parsed.data.datasets.some(ds => ds.data.length === 0);
+            } catch(e) {
+                return true;
             }
-        };
-
-        processesChart.options.plugins.tooltip = {
-            callbacks: {
-                beforeTitle: function (context) {
-                    return context[0].raw.processName;
-                },
-            }
-        };
-
-        processesChart.data.datasets[0].pointRadius = function (context) {
-            return context.raw.r;
         }
 
-        new Chart(document.getElementById('memoryTimeSeries').getContext('2d'), memoryTimeChart);
+        function renderChartOrMessage(containerId, chartData, message = "No data available") {
+            if (isDataEmpty(chartData)) {
+                document.getElementById(containerId).parentElement.innerHTML = `<p class="text-center text-gray-500">${message}</p>`;
+            } else {
+                const parsedData = JSON.parse(chartData);
+                if(containerId === 'processesResourceUsage') {
+                    parsedData.options.plugins.tooltip = {
+                        callbacks: {
+                            beforeTitle: function (context) {
+                                return context[0].raw.processName;
+                            },
+                        }
+                    };
 
-        new Chart(document.getElementById('cpuTimeSeries').getContext('2d'), cpuTimeChart);
+                    parsedData.data.datasets[0].pointRadius = function (context) {
+                        return context.raw.r;
+                    };
 
-        new Chart(document.getElementById('commandsExecutionTime'), commandChart);
+                } else if(containerId === 'commandsExecutionTime') {
+                    parsedData.options.onClick = function (event, elements) {
+                        // 'elements' is an array of elements that are at the click position.
+                        if (elements.length > 0) {
+                            const firstElement = elements[0];
 
-        new Chart(document.getElementById('processesResourceUsage'), processesChart);
+                            // Getting dataset index and index of the item within the dataset
+                            const index = firstElement.index;
 
+                            // Retrieve the data for the clicked item
+                            const label = this.data.labels[index];
+
+                            window.location.href = `/command?label=${label}`;
+                        }
+                    };
+                }
+
+                new Chart(document.getElementById(containerId).getContext('2d'), parsedData);
+            }
+        }
+
+        renderChartOrMessage('memoryTimeSeries', memoryTimeChart);
+        renderChartOrMessage('cpuTimeSeries', cpuTimeChart);
+        renderChartOrMessage('commandsExecutionTime', commandChart);
+        renderChartOrMessage('processesResourceUsage', processesChart);
     })();
 </script>
 </html>

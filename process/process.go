@@ -117,6 +117,38 @@ func GetTopProcessesAndMetrics(start int64, end int64) (map[int64][]Process, err
 	return processMetricsMap, nil
 }
 
+// InsertProcesses inserts multiple processes into the database in bulk
+func InsertProcesses(processes []Process) error {
+	query := `INSERT INTO processes (pid, name, status, created_time, stored_time, os, platform, platform_family, cpu_usage, memory_usage)
+    VALUES (:pid, :name, :status, :created_time, :stored_time, :os, :platform, :platform_family, :cpu_usage, :memory_usage)`
+
+	// Begin a transaction
+	tx, err := database.DB.Beginx()
+	if err != nil {
+		return err
+	}
+
+	// Prepare the statement for execution, within the transaction
+	stmt, err := tx.PrepareNamed(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close() // Ensure the statement is closed after execution
+
+	for _, process := range processes {
+		// Execute the query for each process
+		_, err := stmt.Exec(process)
+		if err != nil {
+			// In case of an error, roll back the transaction
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// Commit the transaction after all inserts
+	return tx.Commit()
+}
+
 // InsertProcess inserts a process into the database
 func InsertProcess(process Process) error {
 	query := `INSERT INTO processes (pid, name, status, created_time, stored_time, os, platform, platform_family, cpu_usage, memory_usage)
