@@ -39,13 +39,20 @@ type IntervalConfig struct {
 
 // collectionConfig contains the configuration for the collection process
 type collectionConfig struct {
-	ongoingCommands       map[string]Command
-	collectionMutex       sync.Mutex
+	// ongoingCommands is a map of currently running commands
+	ongoingCommands map[string]Command
+	// collectionMutex is a mutex to protect the ongoingCommands map
+	collectionMutex sync.Mutex
+	// activeCommandsCounter is a counter for the number of active commands
 	activeCommandsCounter int
-	collectionContext     context.Context
-	collectionCancelFunc  context.CancelFunc
-	isCollectionRunning   bool
-	process               process.SystemProcess
+	// collectionContext is the context for the collection process
+	collectionContext context.Context
+	// collectionCancelFunc is the cancel function for the collection context
+	collectionCancelFunc context.CancelFunc
+	// isCollectionRunning is a flag to indicate if the collection is running
+	isCollectionRunning bool
+	// process is the system process collector
+	process process.SystemProcess
 }
 
 // NewCollector creates a new collector instance
@@ -126,19 +133,18 @@ func (c *Collector) collectOnce() error {
 		return err
 	}
 
-	var processMetrics []*gen.Process
-	for _, p := range processes {
-		process.InsertProcess(p)
+	process.InsertProcesses(processes)
 
-		if c.client != nil {
+	if c.client != nil {
+		var processMetrics []*gen.Process
+		for _, p := range processes {
+
 			processMetrics = append(
 				processMetrics,
 				process.MapProcessToProto(p),
 			)
 		}
-	}
 
-	if c.client != nil {
 		if err := c.client.SendProcesses(processMetrics); err != nil {
 			c.logger.Error().Err(err).Msg("Failed to send processes")
 		}

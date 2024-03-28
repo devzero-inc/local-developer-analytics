@@ -39,19 +39,33 @@
 </body>
 <script>
     (async function () {
-        const commandsChart = JSON.parse(`{{.CommandsJSON}}`);
-        commandsChart.options.onClick = function (event, elements) {
-            if (elements.length > 0) {
-                const firstElement = elements[0];
-                const index = firstElement.index;
+        const commandsData = `{{.CommandsJSON}}`;
 
-                const commandInfo = commandsChart.data.ids[index];
-
-                window.location.href = `/overview?id=${commandInfo}`;
+        function isDataEmpty(data) {
+            try {
+                const parsed = JSON.parse(data);
+                return !parsed.data || !parsed.data.datasets || parsed.data.datasets.length === 0 || parsed.data.datasets.every(ds => ds.data.length === 0);
+            } catch(e) {
+                console.error("Error parsing data:", e);
+                return true;
             }
-        };
+        }
 
-        new Chart(document.getElementById('commandsExecutionTime'), commandsChart);
+        if (isDataEmpty(commandsData)) {
+            document.querySelector('.w-full').innerHTML = `<div class="text-center text-gray-500 p-4 shadow-lg rounded-lg">No command execution data available.</div>`;
+        } else {
+            const commandsChart = JSON.parse(commandsData);
+            commandsChart.options.onClick = function (event, elements) {
+                if (elements.length > 0) {
+                    const firstElement = elements[0];
+                    const index = firstElement.index;
+                    const commandInfo = commandsChart.data.ids[index];
+                    window.location.href = `/overview?id=${commandInfo}`;
+                }
+            };
+
+            new Chart(document.getElementById('commandsExecutionTime'), commandsChart);
+        }
     })();
 </script>
 </html>
