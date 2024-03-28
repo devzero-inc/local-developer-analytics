@@ -5,6 +5,7 @@ import (
 	"lda/collector"
 	"lda/config"
 	"lda/logging"
+	"lda/process"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -45,11 +46,18 @@ func collect(_ *cobra.Command, _ []string) {
 		MaxConcurrentCommands:     config.AppConfig.MaxConcurrentCommands,
 	}
 
+	proccess, err := process.NewFactory(logging.Log).Create(config.AppConfig.ProcessCollectionType)
+	if err != nil {
+		logging.Log.Fatal().Err(err).Msg("Failed to create process collector")
+		return
+	}
+
 	collectorInstance := collector.NewCollector(
 		collector.SocketPath,
 		grpcClient,
 		logging.Log,
 		intervalConfig,
+		proccess,
 	)
 	collectorInstance.Collect()
 }

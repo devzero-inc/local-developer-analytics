@@ -3,18 +3,17 @@ package collector
 import (
 	"context"
 	"fmt"
-	"github.com/rs/zerolog"
 	"lda/client"
 	gen "lda/gen/api/v1"
+	"lda/process"
 	"net"
 	"os"
 	"strings"
 	"sync"
 
-	"time"
+	"github.com/rs/zerolog"
 
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/process"
+	"time"
 )
 
 // TODO move this to /var/run or other appropriate location based on OS,
@@ -46,16 +45,18 @@ type collectionConfig struct {
 	collectionContext     context.Context
 	collectionCancelFunc  context.CancelFunc
 	isCollectionRunning   bool
+	process               process.SystemProcess
 }
 
 // NewCollector creates a new collector instance
-func NewCollector(socketPath string, client *client.Client, logger zerolog.Logger, config IntervalConfig) *Collector {
+func NewCollector(socketPath string, client *client.Client, logger zerolog.Logger, config IntervalConfig, process process.SystemProcess) *Collector {
 	return &Collector{
 		socketPath: socketPath,
 		client:     client,
 		logger:     logger,
 		collectionConfig: collectionConfig{
 			ongoingCommands: make(map[string]Command),
+			process:         process,
 		},
 		intervalConfig: config,
 	}
@@ -119,63 +120,21 @@ func (c *Collector) collectOnce() error {
 
 	c.logger.Debug().Msg("Collecting process")
 
-	hostInfo, _ := host.Info()
-
-	processes, err := process.Processes()
+	processes, err := c.collectionConfig.process.Collect()
 	if err != nil {
-		c.logger.Err(err).Msg("Error retrieving processes")
+		c.logger.Err(err).Msg("Failed to collect processes")
 		return err
 	}
 
 	var processMetrics []*gen.Process
 	for _, p := range processes {
-		createTime, err := p.CreateTime()
-		if err != nil {
-			c.logger.Err(err).Msg("Error retrieving create time")
-			continue
-		}
-
-		name, err := p.Name()
-		if err != nil {
-			c.logger.Err(err).Msg("Error retrieving name")
-			continue
-		}
-
-		cpuPercent, err := p.CPUPercent()
-		if err != nil {
-			c.logger.Err(err).Msg("Error retrieving CPU percent")
-			continue
-		}
-
-		memorypercent, err := p.MemoryPercent()
-		if err != nil {
-			c.logger.Err(err).Msg("Error retrieving memory percent")
-			continue
-		}
-
-		status, err := p.Status()
-		if err != nil {
-			c.logger.Err(err).Msg("Error retrieving status")
-			continue
-		}
-
-		processInfo := Process{
-			PID:            int64(p.Pid),
-			Name:           name,
-			Status:         status,
-			CreatedTime:    createTime,
-			StoredTime:     time.Now().UnixMilli(),
-			OS:             hostInfo.OS,
-			Platform:       hostInfo.Platform,
-			PlatformFamily: hostInfo.PlatformFamily,
-			CPUUsage:       cpuPercent,
-			MemoryUsage:    float64(memorypercent),
-		}
-
-		InsertProcess(processInfo)
+		process.InsertProcess(p)
 
 		if c.client != nil {
-			processMetrics = append(processMetrics, MapProcessToProto(processInfo))
+			processMetrics = append(
+				processMetrics,
+				process.MapProcessToProto(p),
+			)
 		}
 	}
 

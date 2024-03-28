@@ -1,10 +1,46 @@
-package collector
+package process
 
 import (
+	"errors"
 	"lda/database"
 	gen "lda/gen/api/v1"
-	"lda/logging"
+
+	"github.com/rs/zerolog"
 )
+
+const (
+	PsutilType = "psutil"
+	PsType     = "ps"
+)
+
+// SystemProcess interface for process collection
+type SystemProcess interface {
+	Collect() ([]Process, error)
+}
+
+// Factory implementation for proc providers
+type Factory struct {
+	logger zerolog.Logger
+}
+
+// NewFactory init Factory implementation for proc providers
+func NewFactory(logger zerolog.Logger) *Factory {
+	return &Factory{
+		logger: logger,
+	}
+}
+
+// Create creates a new system process collector from the factory
+func (f *Factory) Create(pType string) (SystemProcess, error) {
+	switch pType {
+	case PsutilType:
+		return NewPsutil(f.logger), nil
+	case PsType:
+		return NewPs(f.logger), nil
+	default:
+		return nil, errors.New("system process type not supported")
+	}
+}
 
 // Process is the model for process
 type Process struct {
@@ -35,7 +71,6 @@ func GetAllProcessesForPeriod(start int64, end int64) ([]Process, error) {
 
 	err := database.DB.Select(&processes, query, start, end)
 	if err != nil {
-		logging.Log.Err(err).Msg("Failed to get aggregated processes with start and end times")
 		return nil, err
 	}
 
@@ -58,7 +93,6 @@ func GetTopProcessesAndMetrics(start int64, end int64) (map[int64][]Process, err
 
 	err := database.DB.Select(&topProcesses, topProcessesQuery, start, end)
 	if err != nil {
-		logging.Log.Err(err).Msg("Failed to get top processes")
 		return nil, err
 	}
 
@@ -74,7 +108,6 @@ func GetTopProcessesAndMetrics(start int64, end int64) (map[int64][]Process, err
 
 		err := database.DB.Select(&metrics, metricsQuery, process.Name, process.PID, start, end)
 		if err != nil {
-			logging.Log.Err(err).Msgf("Failed to get time-series data for process %d", process.PID)
 			continue
 		}
 
@@ -85,14 +118,12 @@ func GetTopProcessesAndMetrics(start int64, end int64) (map[int64][]Process, err
 }
 
 // InsertProcess inserts a process into the database
-func InsertProcess(process Process) {
+func InsertProcess(process Process) error {
 	query := `INSERT INTO processes (pid, name, status, created_time, stored_time, os, platform, platform_family, cpu_usage, memory_usage)
 	VALUES (:pid, :name, :status, :created_time, :stored_time, :os, :platform, :platform_family, :cpu_usage, :memory_usage)`
 
 	_, err := database.DB.NamedExec(query, process)
-	if err != nil {
-		logging.Log.Err(err).Msg("Failed to insert process")
-	}
+	return err
 }
 
 func MapProcessToProto(process Process) *gen.Process {
