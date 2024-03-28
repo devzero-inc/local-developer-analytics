@@ -2,6 +2,7 @@ package resources
 
 import (
 	"embed"
+	"encoding/json"
 	"lda/collector"
 	"lda/logging"
 	"lda/process"
@@ -227,6 +228,12 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	processesJson, err := json.Marshal(processes)
+	if err != nil {
+		showError(w)
+		return
+	}
+
 	timeProcesses, err := process.GetTopProcessesAndMetrics(command.StartTime, command.EndTime)
 	if err != nil {
 		showError(w)
@@ -256,9 +263,11 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tmpl.Execute(w, map[string]interface{}{
-		"ProcessesJSON":        processResourceJson,
+		"ProcessResourceJSON":  processResourceJson,
 		"CPUTimeSeriesJSON":    cpuResourceJson,
 		"MemoryTimeSeriesJSON": memoryResourceJson,
+		"Processes":            processes,
+		"ProcessJSON":          string(processesJson),
 	}); err != nil {
 		showError(w)
 	}

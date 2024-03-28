@@ -5,27 +5,53 @@
     <title>Command Execution Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.3/css/dataTables.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <script src="https://cdn.datatables.net/2.0.3/js/dataTables.js"></script>
 </head>
-<body class="p-5">
+<body class="p-5 bg-gray-50">
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="p-4 shadow-lg rounded-lg">
+    <div class="p-4 shadow rounded-lg bg-white">
         <canvas id="processesResourceUsage"></canvas>
     </div>
-    <div class="p-4 shadow-lg rounded-lg">
+    <div class="p-4 shadow rounded-lg bg-white">
         <canvas id="cpuTimeSeries"></canvas>
     </div>
-    <div class="p-4 shadow-lg rounded-lg">
+    <div class="p-4 shadow rounded-lg bg-white">
         <canvas id="memoryTimeSeries"></canvas>
     </div>
+</div>
+
+<div class="overflow-x-auto mt-8">
+<table id="processesTable" class="stripe" style="width:100%">
+        <thead>
+            <tr>
+                <th>PID</th>
+                <th>Name</th>
+                <th>CPU Usage (%)</th>
+                <th>Memory Usage (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Processes}}
+            <tr>
+                <td>{{.PID}}</td>
+                <td>{{.Name}}</td>
+                <td>{{printf "%.2f" .CPUUsage}}</td>
+                <td>{{printf "%.2f" .MemoryUsage}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
 </div>
 </body>
 <script>
     (async function () {
-        const processData = `{{.ProcessesJSON}}`;
+        new DataTable('#processesTable');
+
+        const processData = `{{.ProcessResourceJSON}}`;
         const cpuData = `{{.CPUTimeSeriesJSON}}`;
         const memoryData = `{{.MemoryTimeSeriesJSON}}`;
-
-        console.log(processData);
 
         function isDataEmpty(data) {
             try {
