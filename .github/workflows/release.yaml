@@ -1,0 +1,57 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: build-linux
+            suffix: linux-amd64
+          - target: build-mac
+            suffix: darwin-amd64
+          - target: build-mac-m1
+            suffix: darwin-arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      
+      - name: Build Binary
+        run: |
+          make ${{ matrix.target }}
+          zip "${{ env.TARGET }}-${{ matrix.suffix }}.zip" "${{ env.TARGET }}"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.TARGET }}-${{ matrix.suffix }}.zip
+          path: ${{ env.TARGET }}-${{ matrix.suffix }}.zip
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts/
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
