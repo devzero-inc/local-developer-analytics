@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"lda/collector"
+	"lda/process"
 	"math"
 )
 
@@ -94,7 +95,7 @@ type ChartTooltipOptions struct {
 }
 
 // PrepareCPUTimeSeriesChartData prepares the data for the CPU Time Series chart.
-func PrepareCPUTimeSeriesChartData(processData map[int64][]collector.Process) (string, error) {
+func PrepareCPUTimeSeriesChartData(processData map[int64][]process.Process) (string, error) {
 
 	var datasets []ChartDataDataset
 	for pid, processes := range processData {
@@ -157,7 +158,7 @@ func PrepareCPUTimeSeriesChartData(processData map[int64][]collector.Process) (s
 }
 
 // PrepareMemoryTimeSeriesChartData prepares and returns the chart data for memory usage as a JSON string.
-func PrepareMemoryTimeSeriesChartData(processData map[int64][]collector.Process) (string, error) {
+func PrepareMemoryTimeSeriesChartData(processData map[int64][]process.Process) (string, error) {
 	var datasets []ChartDataDataset
 	for pid, processes := range processData {
 		var dataPoints []DataPoint
@@ -313,7 +314,7 @@ func PrepareCommandCategoriesExecutionTimeChartData(commands []collector.Command
 }
 
 // PrepareProcessesResourceUsageChartData prepares and returns the chart data for processes' resource usage.
-func PrepareProcessesResourceUsageChartData(processes []collector.Process) (string, error) {
+func PrepareProcessesResourceUsageChartData(processes []process.Process) (string, error) {
 	// Generate the data points for the scatter chart from processes data
 	var dataPoints []DataPoint
 	for _, proc := range processes {

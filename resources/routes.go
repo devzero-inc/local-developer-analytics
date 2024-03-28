@@ -4,6 +4,7 @@ import (
 	"embed"
 	"lda/collector"
 	"lda/logging"
+	"lda/process"
 	"net/http"
 	"strconv"
 	"text/template"
@@ -61,13 +62,13 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		showError(w)
 		return
 	}
-	processes, err := collector.GetAllProcessesForPeriod(startMillis, endMillis)
+	processes, err := process.GetAllProcessesForPeriod(startMillis, endMillis)
 	if err != nil {
 		showError(w)
 		return
 	}
 
-	timeProcesses, err := collector.GetTopProcessesAndMetrics(startMillis, endMillis)
+	timeProcesses, err := process.GetTopProcessesAndMetrics(startMillis, endMillis)
 	if err != nil {
 		showError(w)
 		return
@@ -220,13 +221,13 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	processes, err := collector.GetAllProcessesForPeriod(command.StartTime, command.EndTime)
+	processes, err := process.GetAllProcessesForPeriod(command.StartTime, command.EndTime)
 	if err != nil {
 		showError(w)
 		return
 	}
 
-	timeProcesses, err := collector.GetTopProcessesAndMetrics(command.StartTime, command.EndTime)
+	timeProcesses, err := process.GetTopProcessesAndMetrics(command.StartTime, command.EndTime)
 	if err != nil {
 		showError(w)
 		return

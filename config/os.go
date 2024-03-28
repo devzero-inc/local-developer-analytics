@@ -29,6 +29,8 @@ const (
 var (
 	// OS is the operating system
 	OS OSType
+	// OSName is the name of the operating system
+	OSName string
 	// Shell is the active shell
 	Shell ShellType
 	// ShellLocation is the shell configuration directory
@@ -45,7 +47,8 @@ var (
 
 // SetupOs determine the operating system
 func SetupOs() {
-	switch runtime.GOOS {
+	OSName = runtime.GOOS
+	switch OSName {
 	case "linux":
 		logging.Log.Info().Msg("Running on Linux")
 		OS = Linux

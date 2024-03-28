@@ -27,6 +27,8 @@ type Config struct {
 	CertFile string `mapstructure:"cert_file"`
 	// ExcludeRegex regular expression to exclude processes from collection
 	ExcludeRegex string `mapstructure:"exclude_regex"`
+	// ProcessCollectionType type of process collection to use, ps or psutil
+	ProcessCollectionType string `mapstructure:"process_collection_type"`
 }
 
 // AppConfig is the global configuration instance
@@ -49,6 +51,7 @@ func SetupConfig() {
 		CommandInterval:           1,
 		CommandIntervalMultiplier: 5,
 		MaxConcurrentCommands:     20,
+		ProcessCollectionType:     "ps",
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
