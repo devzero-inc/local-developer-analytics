@@ -1,12 +1,8 @@
 ![The devzero logo](https://console.devzero.io/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ffull_logo.379052d8.png&w=1080&q=75)
 
-![Build and Test](https://github.com/devzero-inc/local-developer-analytics/actions/workflows/go.yaml/badge.svg)
-[![License](https://img.shields.io/github/license/devzero-inc/local-developer-analytics.svg)](https://github.com/devzero-inc/local-developer-analytics/blob/main/LICENSE)
-![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/devzero-inc/local-developer-analytics?label=version)
-![GitHub contributors](https://img.shields.io/github/contributors/devzero-inc/local-developer-analytics)
-![GitHub issues](https://img.shields.io/github/issues/devzero-inc/local-developer-analytics)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/devzero-inc/local-developer-analytics)
-![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/devzero-inc/local-developer-analytics)
+![Workflow Status](https://img.shields.io/github/actions/workflow/status/devzero-inc/local-developer-analytics/go.yaml)
+![License](https://img.shields.io/github/license/devzero-inc/local-developer-analytics)
+![Version](https://img.shields.io/github/v/tag/devzero-inc/local-developer-analytics)
 
 # LDA
 
