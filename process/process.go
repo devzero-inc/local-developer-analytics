@@ -149,15 +149,6 @@ func InsertProcesses(processes []Process) error {
 	return tx.Commit()
 }
 
-// InsertProcess inserts a process into the database
-func InsertProcess(process Process) error {
-	query := `INSERT INTO processes (pid, name, status, created_time, stored_time, os, platform, platform_family, cpu_usage, memory_usage)
-	VALUES (:pid, :name, :status, :created_time, :stored_time, :os, :platform, :platform_family, :cpu_usage, :memory_usage)`
-
-	_, err := database.DB.NamedExec(query, process)
-	return err
-}
-
 func MapProcessToProto(process Process) *gen.Process {
 	return &gen.Process{
 		Id:             process.Id,
