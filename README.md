@@ -23,6 +23,16 @@ You can install `lda` using [Homebrew][brew] (macOS or Linux):
 brew install <>
 ```
 
+### wget
+
+You can install `lda` using `wget`:
+
+```sh
+wget https://github.com/devzero-inc/local-developer-analytics/releases/download/<version>/lda-<os>-<arch>.zip
+unzip lda-<os>-<arch>.zip
+mv lda /usr/local/bin
+```
+
 ### Other methods
 
 Install from source:
@@ -32,6 +42,8 @@ Install from source:
 - Run `make install`
   - binary will be in your `$GOPATH/bin`
   - if your PATH isn't set correctly: export GOPATH=$(go env GOPATH) && export PATH=$PATH:$GOPATH/bin
+- Run `make install-global`
+  - binary will be in `/usr/local/bin`
 
 ## Install & Usage
 
