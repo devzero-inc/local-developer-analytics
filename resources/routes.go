@@ -195,6 +195,7 @@ func commandHandler(w http.ResponseWriter, r *http.Request) {
 		"CommandsJSON": commandsJson,
 		"StartTime":    start,
 		"EndTime":      end,
+		"Commands":     commands,
 	}); err != nil {
 		showError(w)
 	}
