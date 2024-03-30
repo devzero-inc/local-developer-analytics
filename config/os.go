@@ -108,9 +108,12 @@ func GetShell() (ShellType, string, error) {
 }
 
 func configureShell(shellLocation string) (ShellType, string, error) {
-	shellType := path.Base(shellLocation)
 
-	var shell ShellType
+	ShellLocation = os.Getenv("SHELL")
+	logging.Log.Info().Msgf("Trying to determine the shell: %s", ShellLocation)
+
+	shellType := path.Base(ShellLocation)
+
 	switch shellType {
 	case "bash":
 		shell = Bash

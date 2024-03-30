@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"lda/client"
+	"lda/config"
 	gen "lda/gen/api/v1"
 	"lda/process"
 	"net"
-	"os"
 	"strings"
 	"sync"
 
@@ -191,7 +191,7 @@ func (c *Collector) onEndCommand() {
 }
 
 func (c *Collector) collectCommandInformation() error {
-	if err := os.RemoveAll(SocketPath); err != nil {
+	if err := config.Fs.RemoveAll(SocketPath); err != nil {
 		c.logger.Error().Err(err).Msg("Failed to clean up existing socket")
 		return err
 	}
