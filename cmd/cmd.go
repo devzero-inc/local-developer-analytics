@@ -10,6 +10,7 @@ import (
 	"lda/resources"
 	"lda/shell"
 	"lda/user"
+	"lda/util"
 	"net/http"
 	"os"
 
@@ -109,6 +110,9 @@ func setupConfig() {
 
 	// setting up the system configuration
 	config.SetupSysConfig()
+
+	// Setup afero FS layer
+	util.SetupFS()
 
 	sudoExecUser, isRoot, err := config.GetUserConfig()
 	if err != nil {
