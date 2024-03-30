@@ -105,7 +105,7 @@ func SetupHomeDir() {
 func SetupLdaDir() {
 
 	dir := filepath.Join(HomeDir, ".lda")
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
+	if err := Fs.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
 		logging.Log.Err(err).Msg("Failed to create shell configuration directory")
 	}
 

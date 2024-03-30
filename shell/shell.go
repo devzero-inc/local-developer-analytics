@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"github.com/spf13/afero"
 	"lda/collector"
 	"lda/config"
 	"lda/logging"
 	"lda/util"
-	"os"
 	"path/filepath"
 	"text/template"
 )
@@ -72,7 +72,7 @@ func InstallShellConfiguration() error {
 		return err
 	}
 
-	if err := os.WriteFile(collectorFilePath, cmdContent.Bytes(), execPermissions); err != nil {
+	if err := afero.WriteFile(config.Fs, collectorFilePath, cmdContent.Bytes(), execPermissions); err != nil {
 		logging.Log.Err(err).Msg("Failed to write collector files")
 		return err
 	}
@@ -97,7 +97,7 @@ func InstallShellConfiguration() error {
 		return err
 	}
 
-	if err := os.WriteFile(filePath, shellContent.Bytes(), execPermissions); err != nil {
+	if err := afero.WriteFile(config.Fs, filePath, shellContent.Bytes(), execPermissions); err != nil {
 		logging.Log.Err(err).Msg("Failed to write shell files")
 		return err
 	}
@@ -112,13 +112,13 @@ func DeleteShellConfiguration() error {
 
 	filePath := filepath.Join(config.LdaDir, "lda.sh")
 
-	if err := os.Remove(filePath); err != nil {
+	if err := config.Fs.Remove(filePath); err != nil {
 		logging.Log.Err(err).Msg("Failed to remove shell configuration")
 		return err
 	}
 
 	filePath = filepath.Join(config.LdaDir, "collector.sh")
-	if err := os.Remove(filePath); err != nil {
+	if err := config.Fs.Remove(filePath); err != nil {
 		logging.Log.Err(err).Msg("Failed to remove shell configuration")
 		return err
 	}

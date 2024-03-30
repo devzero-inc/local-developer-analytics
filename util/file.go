@@ -2,6 +2,7 @@ package util
 
 import (
 	"bufio"
+	"lda/config"
 	"lda/logging"
 	"os"
 	"strings"
@@ -9,7 +10,7 @@ import (
 
 // FileExists checks if a file exists or not
 func FileExists(filePath string) bool {
-	if _, err := os.Stat(filePath); err == nil {
+	if _, err := config.Fs.Stat(filePath); err == nil {
 		return true
 	} else if !os.IsNotExist(err) {
 		logging.Log.Err(err).Msg("Failed to check if file exists or not")
@@ -19,7 +20,7 @@ func FileExists(filePath string) bool {
 
 // IsScriptPresent checks if a script is already present in a file
 func IsScriptPresent(filePath, script string) bool {
-	file, err := os.Open(filePath)
+	file, err := config.Fs.Open(filePath)
 	if err != nil {
 		return false
 	}
@@ -36,7 +37,7 @@ func IsScriptPresent(filePath, script string) bool {
 
 // AppendToFile appends content to a file
 func AppendToFile(filePath, content string) error {
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	f, err := config.Fs.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		return err
 	}

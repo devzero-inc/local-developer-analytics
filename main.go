@@ -21,6 +21,9 @@ func init() {
 	// setting up the operating system
 	config.SetupOs()
 
+	// setting up the file system
+	config.SetupFS()
+
 	// setting up the shell
 	config.SetupShell()
 
