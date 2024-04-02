@@ -1,7 +1,5 @@
 function generate_uuid
     echo (date +%s)"-"(echo %self)"-"(random)
-    | shasum
-    | cut -d " " -f1
 end
 
 function fish_preexec --on-event fish_preexec

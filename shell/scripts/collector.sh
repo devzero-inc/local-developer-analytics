@@ -16,10 +16,14 @@ command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
-# Check if command exists and supports specific options
+# Check if nc supports the -U flag
 nc_supports_U() {
-  echo | nc -U "" &> /dev/null
-  return $?
+    echo | nc -U "" > /dev/null 2>&1
+    if [ $? -eq 0 ] || [ $? -eq 1 ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 # Python function to communicate via socket
