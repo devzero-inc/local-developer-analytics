@@ -1,5 +1,5 @@
 generate_uuid() {
-    echo "$(date +%s)-$$-$RANDOM" | shasum | cut -d " " -f1
+    echo "$(date +%s)-$$-$RANDOM" | openssl sha1 | cut -d " " -f2
 }
 
 preexec_invoke_exec() {

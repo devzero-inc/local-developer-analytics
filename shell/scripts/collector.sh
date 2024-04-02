@@ -16,6 +16,12 @@ command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
+# Check if command exists and supports specific options
+nc_supports_U() {
+  echo | nc -U "" &> /dev/null
+  return $?
+}
+
 # Python function to communicate via socket
 send_via_python() {
   python -c "import socket; import sys; \
@@ -37,7 +43,7 @@ send_via_perl() {
 LOG_MESSAGE="$1|$2|$3|$4|$5"
 
 # Send the log message to the Go application via UNIX socket
-if command_exists nc; then
+if command_exists nc && nc_supports_U; then
   echo "$LOG_MESSAGE" | nc -U "$SOCKET_PATH"
 elif command_exists socat; then
   echo "$LOG_MESSAGE" | socat - UNIX-CONNECT:"$SOCKET_PATH"
