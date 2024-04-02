@@ -45,9 +45,6 @@ endif
 .PHONY: \
 	all \
 	build \
-	build-mac \
-	build-mac-m1 \
-	build-linux \
 	deps \
 	doc \
 	buf \
@@ -67,18 +64,6 @@ all: build debug
 ## Build binary
 build: proto
 	CGO_ENABLED=1 GOOS=$(UNAME) go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
-
-## Build binary for linux amd64
-build-linux: proto
-	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
-
-## Build binary for darwin amd64
-build-mac: proto
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
-
-## Build binary for darwin arm64
-build-mac-m1: proto
-	CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
 
 ## Install binary to GOPATH
 install: proto
