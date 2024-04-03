@@ -1,13 +1,61 @@
+# Whether debug mode is enabled. Debug mode provides more verbose output for troubleshooting.
+# Default: false
 debug = false
-#process_interval = 3600
-#command_interval = 1
-#command_interval_multiplier = 5
-#max_concurrent_commands = 20
+
+# Interval in seconds between collections of general process information.
+# This setting controls how often the system checks and collects data on all processes.
+# A lower value increases the frequency of data collection, potentially leading to higher resource usage.
+# Default: 120 seconds
+# process_interval = 3600
+
+# Interval in seconds to collect information about processes when a command has been executed.
+# This is useful for getting more granular data following specific events.
+# Default: 1 second
+# command_interval = 1
+
+# Multiplier for the command interval. This value extends the collection interval after a command execution,
+# allowing for extended monitoring of processes post-execution.
+# Default: 5
+# command_interval_multiplier = 5
+
+# Maximum number of commands that can be collected concurrently.
+# This limit helps to control resource usage by limiting how many commands are processed at the same time.
+# Default: 20
+# max_concurrent_commands = 20
+
+# Flag to enable or disable remote collection of data.
+# When enabled, process data will be collected not just locally but also from configured remote sources.
+# When this is enabled, 'server_host' and 'server_port' must be specified.
+# Default: false
 remote_collection = false
-#server_host =
-#server_port =
-#exclude_regex =
-#secure_connection =
-#cert_file =
-exclude_regex = "password"
-process_collection_type = "ps"
+
+# The server host address for remote collection.
+# This is required when 'remote_collection' is enabled and specifies the remote server to connect to.
+# Default: (empty)
+# server_host = ""
+
+# The server port for remote collection.
+# Along with 'server_host', this defines the network address for the remote server.
+# Default: (empty)
+# server_port = ""
+
+# Regular expression pattern to exclude certain processes from being collected.
+# This can be used to omit sensitive or irrelevant processes from the data collection.
+# Default: (empty, meaning no processes are excluded)
+# exclude_regex = ""
+
+# Whether to establish a secure connection for remote data collection.
+# When enabled, data transmitted to and from the remote server will be encrypted.
+# Requires 'cert_file' to be specified if true.
+# Default: false
+# secure_connection = false
+
+# Path to the certificate file used for establishing a secure connection.
+# This file should contain the SSL certificate when 'secure_connection' is enabled.
+# Default: (empty)
+# cert_file = ""
+
+# Specifies the type of process collection mechanism to use.
+# Options are 'ps' for basic process status information and 'psutil' for more detailed data, depending on system support.
+# Default: "ps"
+# process_collection_type = "ps"
