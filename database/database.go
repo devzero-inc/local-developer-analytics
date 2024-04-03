@@ -1,8 +1,8 @@
 package database
 
 import (
+	"fmt"
 	"lda/config"
-	"lda/logging"
 	"os"
 	"path/filepath"
 
@@ -20,7 +20,7 @@ func Setup() {
 
 	db, err := sqlx.Connect("sqlite3", dbPath)
 	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to setup database")
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to setup database: %s\n", err)
 		os.Exit(1)
 	}
 	DB = db

@@ -5,6 +5,7 @@ import (
 	"io"
 	"lda/config"
 	"lda/daemon"
+	"lda/database"
 	"lda/logging"
 	"lda/resources"
 	"lda/shell"
@@ -75,7 +76,7 @@ func init() {
 	includeShowFlagsForLda(ldaCmd)
 	includeShowFlagsForServe(serveCmd)
 
-	cobra.OnInitialize(initLogging)
+	cobra.OnInitialize(setupConfig)
 
 	ldaCmd.AddCommand(versionCmd)
 	ldaCmd.AddCommand(collectCmd)
@@ -95,13 +96,44 @@ func includeShowFlagsForServe(cmd *cobra.Command) {
 	cmd.Flags().StringP("port", "p", "8080", "Port to serve the frontend client")
 }
 
-func initLogging() {
+func setupConfig() {
+
+	// setting up the system configuration
+	config.SetupSysConfig()
+
+	// setting up the operating system
+	config.SetupOs()
+
+	// setting up the shell
+	config.SetupShell()
+
+	// setting up the home directory
+	config.SetupHomeDir()
+
+	// setting up the LDA directory
+	config.SetupLdaDir()
+
+	// setting up the user permission level
+	config.SetupUserConfig()
+
+	// setting up optional application configuration
+	config.SetupConfig()
+
+	// setting up the LDA binary path
+	config.SetupLdaBinaryPath()
+
+	// setup database and run migrations
+	database.Setup()
+	database.RunMigrations()
+
+	// setting up the Logger
 	// TODO: consider adding verbose levels
 	if config.AppConfig.Debug || Verbose {
 		logging.Setup(os.Stdout, true)
 	} else {
 		logging.Setup(io.Discard, false)
 	}
+
 }
 
 // Execute is the entry point for the command line
@@ -119,37 +151,37 @@ func lda(cmd *cobra.Command, _ []string) {
 }
 
 func reload(_ *cobra.Command, _ []string) error {
-	fmt.Fprintln(config.AppConfig.Out, "Reloading LDA daemon...")
+	fmt.Fprintln(config.SysConfig.Out, "Reloading LDA daemon...")
 	if err := daemon.ReloadDaemon(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to reload daemon")
 		return errors.Wrap(err, "failed to reload LDA daemon")
 	}
-	fmt.Fprintln(config.AppConfig.Out, "Reloading LDA daemon finished.")
+	fmt.Fprintln(config.SysConfig.Out, "Reloading LDA daemon finished.")
 	return nil
 }
 
 func start(_ *cobra.Command, _ []string) error {
-	fmt.Fprintln(config.AppConfig.Out, "Starting LDA daemon...")
+	fmt.Fprintln(config.SysConfig.Out, "Starting LDA daemon...")
 	if err := daemon.StartDaemon(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to start daemon")
 		return errors.Wrap(err, "failed to start LDA daemon")
 	}
-	fmt.Fprintln(config.AppConfig.Out, "LDA daemon started.")
+	fmt.Fprintln(config.SysConfig.Out, "LDA daemon started.")
 	return nil
 }
 
 func stop(_ *cobra.Command, _ []string) error {
-	fmt.Fprintln(config.AppConfig.Out, "Stopping LDA daemon...")
+	fmt.Fprintln(config.SysConfig.Out, "Stopping LDA daemon...")
 	if err := daemon.StopDaemon(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to stop daemon")
 		return errors.Wrap(err, "failed to stop LDA daemon")
 	}
-	fmt.Fprintln(config.AppConfig.Out, "LDA daemon stopped.")
+	fmt.Fprintln(config.SysConfig.Out, "LDA daemon stopped.")
 	return nil
 }
 
 func install(_ *cobra.Command, _ []string) error {
-	fmt.Fprintln(config.AppConfig.Out, "Installing LDA daemon...")
+	fmt.Fprintln(config.SysConfig.Out, "Installing LDA daemon...")
 	if err := daemon.InstallDaemonConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to install daemon configuration")
 		return errors.Wrap(err, "failed to install LDA daemon configuration file")
@@ -165,12 +197,12 @@ func install(_ *cobra.Command, _ []string) error {
 		return errors.Wrap(err, "failed to inject LDA shell source")
 	}
 
-	fmt.Fprintln(config.AppConfig.Out, "LDA daemon installed successfully.")
+	fmt.Fprintln(config.SysConfig.Out, "LDA daemon installed successfully.")
 	return nil
 }
 
 func uninstall(_ *cobra.Command, _ []string) error {
-	fmt.Fprintln(config.AppConfig.Out, "Uninstalling LDA daemon...")
+	fmt.Fprintln(config.SysConfig.Out, "Uninstalling LDA daemon...")
 	if err := daemon.DestroyDaemonConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to uninstall daemon configuration")
 		return errors.Wrap(err, "failed to uninstall LDA daemon configuration file")
@@ -181,7 +213,7 @@ func uninstall(_ *cobra.Command, _ []string) error {
 		return errors.Wrap(err, "failed to delete LDA shell configuration files")
 	}
 
-	fmt.Fprintln(config.AppConfig.Out, `Daemon service files and shell configuration deleted successfully, 
+	fmt.Fprintln(config.SysConfig.Out, `Daemon service files and shell configuration deleted successfully, 
 		~/.lda directory still holds database file, and your rc file stills has source script.
 		If you wish to remove those, delete them manually`)
 
@@ -191,7 +223,7 @@ func uninstall(_ *cobra.Command, _ []string) error {
 func serve(cmd *cobra.Command, _ []string) error {
 	portFlag := cmd.Flag("port").Value
 
-	fmt.Fprintf(config.AppConfig.Out, "Serving local frontend client on http://localhost:%v\n", portFlag)
+	fmt.Fprintf(config.SysConfig.Out, "Serving local frontend client on http://localhost:%v\n", portFlag)
 
 	resources.Serve()
 

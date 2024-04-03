@@ -1,7 +1,8 @@
 package database
 
 import (
-	"lda/logging"
+	"fmt"
+	"lda/config"
 	"os"
 )
 
@@ -21,7 +22,7 @@ func ensureMigrationTableExists() {
 
 	_, err := DB.Exec(createMigrationTableSQL)
 	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to create schema_migrations table")
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create schema_migrations table: %s\n", err)
 		os.Exit(1)
 	}
 }
@@ -46,7 +47,7 @@ func createProcessesTable() {
 
 		_, err := DB.Exec(createProcessesTableSQL)
 		if err != nil {
-			logging.Log.Error().Err(err).Msg("Failed to create processes table")
+			fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create processes table: %s\n", err)
 			os.Exit(1)
 		}
 		recordMigration(migrationName)
@@ -70,7 +71,7 @@ func createCommandsTable() {
 
 		_, err := DB.Exec(createCommandsTableSQL)
 		if err != nil {
-			logging.Log.Error().Err(err).Msg("Failed to create commands table")
+			fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create commands table: %s\n", err)
 			os.Exit(1)
 		}
 		recordMigration(migrationName)
@@ -81,7 +82,7 @@ func migrationApplied(migrationName string) bool {
 	var count int
 	err := DB.Get(&count, "SELECT COUNT(*) FROM schema_migrations WHERE migration_name = ?", migrationName)
 	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to query schema_migrations table")
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to query schema_migrations table: %s\n", err)
 		os.Exit(1)
 	}
 	return count > 0
@@ -90,7 +91,7 @@ func migrationApplied(migrationName string) bool {
 func recordMigration(migrationName string) {
 	_, err := DB.Exec("INSERT INTO schema_migrations (migration_name) VALUES (?)", migrationName)
 	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to record migration")
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to record migration: %s\n", err)
 		os.Exit(1)
 	}
 }

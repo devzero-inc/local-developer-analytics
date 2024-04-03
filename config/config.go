@@ -1,9 +1,13 @@
 package config
 
 import (
+	_ "embed"
+	"fmt"
 	"io"
-	"lda/logging"
 	"os"
+	"path/filepath"
+
+	"github.com/pkg/errors"
 
 	"github.com/spf13/viper"
 )
@@ -32,24 +36,48 @@ type Config struct {
 	ExcludeRegex string `mapstructure:"exclude_regex"`
 	// ProcessCollectionType type of process collection to use, ps or psutil
 	ProcessCollectionType string `mapstructure:"process_collection_type"`
+}
 
-	// Configuration that is not available via the configuration file
-
+// SystemConfig Configuration that is not available via the configuration file
+type SystemConfig struct {
 	// Out is the output writer for printing information
 	Out io.Writer
 	// ErrOut is the error output writer for printing errors
 	ErrOut io.Writer
 }
 
+// Embedding config file
+//
+//go:embed config.example.toml
+var configExample string
+
 // AppConfig is the global configuration instance
 var AppConfig *Config
+
+// SysConfig is the global system configuration instance
+var SysConfig *SystemConfig
+
+// SetupSysConfig initialize the system configuration instance
+func SetupSysConfig() {
+	SysConfig = &SystemConfig{
+		// Set default output writers - currently we only use stdout and stderr, but this could potentially be changed
+		Out:    os.Stdout,
+		ErrOut: os.Stderr,
+	}
+}
 
 // SetupConfig initialize the configuration instance
 func SetupConfig() {
 
-	viper.SetConfigName("config")
-	viper.SetConfigType("toml")
-	viper.AddConfigPath(LdaDir)
+	configPath := filepath.Join(LdaDir, "config.toml")
+
+	if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
+		if err := os.WriteFile(configPath, []byte(configExample), 0644); err != nil {
+			fmt.Fprintf(SysConfig.ErrOut, "Failed to create config file: %s\n", err)
+		}
+	}
+
+	viper.SetConfigFile(configPath)
 
 	// Set default configuration values
 	var config = &Config{
@@ -60,17 +88,14 @@ func SetupConfig() {
 		CommandIntervalMultiplier: 5,
 		MaxConcurrentCommands:     20,
 		ProcessCollectionType:     "ps",
-		// Set default output writers - currently we only use stdout and stderr, but this could potentially be changed
-		Out:    os.Stdout,
-		ErrOut: os.Stderr,
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to read config file")
+		fmt.Fprintf(SysConfig.ErrOut, "Failed to read config file: %s\n", err)
 	}
 
 	if err := viper.Unmarshal(config); err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to unmarshal config file")
+		fmt.Fprintf(SysConfig.ErrOut, "Failed to unmarshal config: %s\n", err)
 	}
 
 	AppConfig = config

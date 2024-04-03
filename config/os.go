@@ -1,7 +1,7 @@
 package config
 
 import (
-	"lda/logging"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -50,14 +50,12 @@ func SetupOs() {
 	OSName = runtime.GOOS
 	switch OSName {
 	case "linux":
-		logging.Log.Info().Msg("Running on Linux")
 		OS = Linux
 	case "darwin":
-		logging.Log.Info().Msg("Running on macOS")
 		OS = MacOS
 	default:
 		// TODO: check if this will work on WSL, maybe it will?
-		logging.Log.Error().Msg("Unsupported operating system")
+		fmt.Fprint(SysConfig.ErrOut, "Unsupported operating system")
 		os.Exit(1)
 	}
 }
@@ -66,26 +64,21 @@ func SetupOs() {
 func SetupShell() {
 
 	ShellLocation = os.Getenv("SHELL")
-	logging.Log.Debug().Msgf("Trying to determine the shell: %s", ShellLocation)
 
 	shellType := path.Base(ShellLocation)
 
 	switch shellType {
 	case "bash":
-		logging.Log.Info().Msg("Running bash shell")
 		Shell = Bash
 	case "zsh":
-		logging.Log.Info().Msg("Running zsh shell")
 		Shell = Zsh
 	case "fish":
-		logging.Log.Info().Msg("Running fish shell")
 		Shell = Fish
 	case "sh":
-		logging.Log.Info().Msg("Running sh shell")
 		Shell = Sh
 		// TODO: consider supporting "ash" as well.
 	default:
-		logging.Log.Error().Msg("Unsupported shell")
+		fmt.Fprint(SysConfig.ErrOut, "Unsupported shell")
 		os.Exit(1)
 	}
 
@@ -95,7 +88,7 @@ func SetupShell() {
 func SetupHomeDir() {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to get user home directory")
+		fmt.Fprintf(SysConfig.ErrOut, "Failed to get user home directory: %s\n", err)
 		os.Exit(1)
 	}
 	HomeDir = home
@@ -106,7 +99,8 @@ func SetupLdaDir() {
 
 	dir := filepath.Join(HomeDir, ".lda")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
-		logging.Log.Err(err).Msg("Failed to create shell configuration directory")
+		fmt.Fprintf(SysConfig.ErrOut, "Failed to create LDA home directory: %s\n", err)
+		os.Exit(1)
 	}
 
 	LdaDir = dir
@@ -121,7 +115,7 @@ func SetupUserConfig() {
 func SetupLdaBinaryPath() {
 	exePath, err := os.Executable()
 	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to get executable path")
+		fmt.Fprintf(SysConfig.ErrOut, "Failed to find executable path: %s\n", err)
 		os.Exit(1)
 	}
 	ExePath = exePath

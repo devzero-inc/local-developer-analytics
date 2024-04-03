@@ -1,0 +1,13 @@
+debug = false
+#process_interval = 3600
+#command_interval = 1
+#command_interval_multiplier = 5
+#max_concurrent_commands = 20
+remote_collection = false
+#server_host =
+#server_port =
+#exclude_regex =
+#secure_connection =
+#cert_file =
+exclude_regex = "password"
+process_collection_type = "ps"
