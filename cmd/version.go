@@ -18,5 +18,5 @@ var (
 )
 
 func version(_ *cobra.Command, _ []string) {
-	fmt.Printf("LDA v%s\n", config.Version)
+	fmt.Fprintf(config.AppConfig.Out, "LDA v%s\n", config.Version)
 }

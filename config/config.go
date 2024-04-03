@@ -1,8 +1,11 @@
 package config
 
 import (
-	"github.com/spf13/viper"
+	"io"
 	"lda/logging"
+	"os"
+
+	"github.com/spf13/viper"
 )
 
 // Config config definition
@@ -29,6 +32,13 @@ type Config struct {
 	ExcludeRegex string `mapstructure:"exclude_regex"`
 	// ProcessCollectionType type of process collection to use, ps or psutil
 	ProcessCollectionType string `mapstructure:"process_collection_type"`
+
+	// Configuration that is not available via the configuration file
+
+	// Out is the output writer for printing information
+	Out io.Writer
+	// ErrOut is the error output writer for printing errors
+	ErrOut io.Writer
 }
 
 // AppConfig is the global configuration instance
@@ -36,8 +46,6 @@ var AppConfig *Config
 
 // SetupConfig initialize the configuration instance
 func SetupConfig() {
-
-	logging.Log.Debug().Msg("Setting up application configuration")
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("toml")
@@ -52,17 +60,18 @@ func SetupConfig() {
 		CommandIntervalMultiplier: 5,
 		MaxConcurrentCommands:     20,
 		ProcessCollectionType:     "ps",
+		// Set default output writers - currently we only use stdout and stderr, but this could potentially be changed
+		Out:    os.Stdout,
+		ErrOut: os.Stderr,
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
-		logging.Log.Debug().Err(err).Msg("Failed to read config file")
+		logging.Log.Error().Err(err).Msg("Failed to read config file")
 	}
 
 	if err := viper.Unmarshal(config); err != nil {
-		logging.Log.Debug().Err(err).Msg("Failed to unmarshal config file")
+		logging.Log.Error().Err(err).Msg("Failed to unmarshal config file")
 	}
-
-	logging.Log.Debug().Msgf("Config loaded: %+v", config)
 
 	AppConfig = config
 }

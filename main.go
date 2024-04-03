@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/rs/zerolog"
 	"lda/cmd"
 	"lda/config"
 	"lda/database"
@@ -15,7 +14,7 @@ func init() {
 	// setting up the Logger
 	logging.Setup(
 		os.Stdout,
-		true,
+		false,
 	)
 
 	// setting up the operating system
@@ -42,16 +41,6 @@ func init() {
 	// setup database and run migrations
 	database.Setup()
 	database.RunMigrations()
-
-	// Patch logging level to correct verbosity level
-	// since initially it's hard coded to debug.
-	if config.AppConfig.Debug {
-		logging.Log.Debug().Msg("Setting log level to debug")
-		logging.Log = logging.Log.Level(zerolog.DebugLevel)
-	} else {
-		logging.Log.Info().Msg("Setting log level to info")
-		logging.Log = logging.Log.Level(zerolog.InfoLevel)
-	}
 }
 
 func main() {

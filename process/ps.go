@@ -13,16 +13,19 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Ps is the type for the ps process collector
 type Ps struct {
 	logger zerolog.Logger
 }
 
+// NewPs creates a new Ps instance
 func NewPs(logger zerolog.Logger) *Ps {
 	return &Ps{
 		logger: logger,
 	}
 }
 
+// Collect collects the process information using the ps command
 func (p *Ps) Collect() ([]Process, error) {
 	p.logger.Debug().Msg("Collecting process")
 

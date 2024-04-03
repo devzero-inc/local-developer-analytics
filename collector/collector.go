@@ -133,7 +133,9 @@ func (c *Collector) collectOnce() error {
 		return err
 	}
 
-	process.InsertProcesses(processes)
+	if err := process.InsertProcesses(processes); err != nil {
+		c.logger.Error().Err(err).Msg("Failed to insert processes")
+	}
 
 	if c.client != nil {
 		var processMetrics []*gen.Process

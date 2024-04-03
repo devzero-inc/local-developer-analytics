@@ -18,11 +18,11 @@ command_exists() {
 
 # Check if nc supports the -U flag
 nc_supports_U() {
-    echo | nc -U "" > /dev/null 2>&1
-    if [ $? -eq 0 ] || [ $? -eq 1 ]; then
-        return 0
-    else
+    error_message=$(echo | nc -U "" 2>&1)
+    if echo "$error_message" | grep -q 'invalid option'; then
         return 1
+    else
+        return 0
     fi
 }
 

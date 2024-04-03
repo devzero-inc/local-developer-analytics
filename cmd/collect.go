@@ -8,6 +8,8 @@ import (
 	"lda/process"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 )
 
@@ -17,11 +19,11 @@ var (
 		Short: "Collect command and system information",
 		Long:  `Collect and process command and system information.`,
 
-		Run: collect,
+		RunE: collect,
 	}
 )
 
-func collect(_ *cobra.Command, _ []string) {
+func collect(_ *cobra.Command, _ []string) error {
 
 	var grpcClient *client.Client
 	var err error
@@ -36,6 +38,7 @@ func collect(_ *cobra.Command, _ []string) {
 		grpcClient, err = client.NewClient(grpcConfig)
 		if err != nil {
 			logging.Log.Error().Err(err).Msg("Failed to create client")
+			return errors.Wrap(err, "failed to create client")
 		}
 	}
 
@@ -48,8 +51,8 @@ func collect(_ *cobra.Command, _ []string) {
 
 	proccess, err := process.NewFactory(logging.Log).Create(config.AppConfig.ProcessCollectionType)
 	if err != nil {
-		logging.Log.Fatal().Err(err).Msg("Failed to create process collector")
-		return
+		logging.Log.Error().Err(err).Msg("Failed to create process collector")
+		return errors.Wrap(err, "failed to create process collector")
 	}
 
 	collectorInstance := collector.NewCollector(
@@ -59,5 +62,8 @@ func collect(_ *cobra.Command, _ []string) {
 		intervalConfig,
 		proccess,
 	)
+
 	collectorInstance.Collect()
+
+	return nil
 }

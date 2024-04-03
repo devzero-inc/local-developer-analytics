@@ -151,6 +151,7 @@ func ReloadDaemon() error {
 		logging.Log.Error().Msg("Unsupported operating system for reload")
 		return fmt.Errorf("unsupported operating system")
 	}
+
 }
 
 // reloadLinuxDaemon reloads the daemon service on Linux using systemctl.

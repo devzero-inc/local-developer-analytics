@@ -57,7 +57,7 @@ func SetupOs() {
 		OS = MacOS
 	default:
 		// TODO: check if this will work on WSL, maybe it will?
-		logging.Log.Fatal().Msg("Unsupported operating system")
+		logging.Log.Error().Msg("Unsupported operating system")
 		os.Exit(1)
 	}
 }
@@ -66,7 +66,7 @@ func SetupOs() {
 func SetupShell() {
 
 	ShellLocation = os.Getenv("SHELL")
-	logging.Log.Info().Msgf("Trying to determine the shell: %s", ShellLocation)
+	logging.Log.Debug().Msgf("Trying to determine the shell: %s", ShellLocation)
 
 	shellType := path.Base(ShellLocation)
 
@@ -85,7 +85,7 @@ func SetupShell() {
 		Shell = Sh
 		// TODO: consider supporting "ash" as well.
 	default:
-		logging.Log.Fatal().Msg("Unsupported shell")
+		logging.Log.Error().Msg("Unsupported shell")
 		os.Exit(1)
 	}
 
@@ -95,7 +95,7 @@ func SetupShell() {
 func SetupHomeDir() {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		logging.Log.Fatal().Err(err).Msg("Failed to get user home directory")
+		logging.Log.Error().Err(err).Msg("Failed to get user home directory")
 		os.Exit(1)
 	}
 	HomeDir = home
@@ -121,7 +121,7 @@ func SetupUserConfig() {
 func SetupLdaBinaryPath() {
 	exePath, err := os.Executable()
 	if err != nil {
-		logging.Log.Fatal().Err(err).Msg("Failed to get executable path")
+		logging.Log.Error().Err(err).Msg("Failed to get executable path")
 		os.Exit(1)
 	}
 	ExePath = exePath

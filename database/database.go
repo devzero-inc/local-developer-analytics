@@ -3,6 +3,7 @@ package database
 import (
 	"lda/config"
 	"lda/logging"
+	"os"
 	"path/filepath"
 
 	"github.com/jmoiron/sqlx"
@@ -19,7 +20,8 @@ func Setup() {
 
 	db, err := sqlx.Connect("sqlite3", dbPath)
 	if err != nil {
-		logging.Log.Fatal().Err(err).Msg("Failed to setup database")
+		logging.Log.Error().Err(err).Msg("Failed to setup database")
+		os.Exit(1)
 	}
 	DB = db
 }

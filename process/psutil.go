@@ -8,16 +8,19 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
+// Psutil is the type for the psutil process collector
 type Psutil struct {
 	logger zerolog.Logger
 }
 
+// NewPsutil creates a new Psutil instance
 func NewPsutil(logger zerolog.Logger) *Psutil {
 	return &Psutil{
 		logger: logger,
 	}
 }
 
+// Collect collects the process information using the psutil library
 func (p *Psutil) Collect() ([]Process, error) {
 
 	p.logger.Debug().Msg("Collecting process")
