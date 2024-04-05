@@ -11,6 +11,13 @@
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>EnvironmentVariables</key>
+        <dict>
+            <key>SHELL</key>
+            <string>{{.Shell}}</string>
+            <key>HOME</key>
+            <string>{{.Home}}</string>
+        </dict>
     <key>StandardOutPath</key>
     <string>/tmp/devzero.io.lda.out.log</string>
     <key>StandardErrorPath</key>

@@ -101,11 +101,14 @@ func setupConfig() {
 	// setting up the system configuration
 	config.SetupSysConfig()
 
-	// setting up the operating system
-	config.SetupOs()
+	// setting up the user permission level
+	config.SetupUserConfig()
 
-	// setting up the shell
-	config.SetupShell()
+	// setting up the operating system
+	config.SetupOS()
+
+	// setting up the LDA binary path
+	config.SetupLdaBinaryPath()
 
 	// setting up the home directory
 	config.SetupHomeDir()
@@ -113,18 +116,8 @@ func setupConfig() {
 	// setting up the LDA directory
 	config.SetupLdaDir()
 
-	// setting up the user permission level
-	config.SetupUserConfig()
-
 	// setting up optional application configuration
 	config.SetupConfig()
-
-	// setting up the LDA binary path
-	config.SetupLdaBinaryPath()
-
-	// setup database and run migrations
-	database.Setup()
-	database.RunMigrations()
 
 	// setting up the Logger
 	// TODO: consider adding verbose levels
@@ -134,6 +127,33 @@ func setupConfig() {
 		logging.Setup(io.Discard, false)
 	}
 
+	// setup database and run migrations
+	database.Setup()
+	database.RunMigrations()
+}
+
+func setupShell() *shell.Shell {
+	shl, err := shell.NewShell(logging.Log, config.IsRoot, config.LdaDir, config.HomeDir)
+
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to setup shell")
+		os.Exit(1)
+	}
+
+	return shl
+}
+
+// setupDaemon initializes the daemon runner with basic configuration
+func setupDaemon(shl *shell.Shell) *daemon.Daemon {
+
+	daemonConf := &daemon.Config{
+		ExePath:       config.ExePath,
+		HomeDir:       config.HomeDir,
+		IsRoot:        config.IsRoot,
+		Os:            config.OS,
+		ShellLocation: shl.ShellLocation,
+	}
+	return daemon.NewDaemon(daemonConf, logging.Log)
 }
 
 // Execute is the entry point for the command line
@@ -151,8 +171,12 @@ func lda(cmd *cobra.Command, _ []string) {
 }
 
 func reload(_ *cobra.Command, _ []string) error {
+
+	shl := setupShell()
+	dmn := setupDaemon(shl)
+
 	fmt.Fprintln(config.SysConfig.Out, "Reloading LDA daemon...")
-	if err := daemon.ReloadDaemon(); err != nil {
+	if err := dmn.ReloadDaemon(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to reload daemon")
 		return errors.Wrap(err, "failed to reload LDA daemon")
 	}
@@ -161,8 +185,12 @@ func reload(_ *cobra.Command, _ []string) error {
 }
 
 func start(_ *cobra.Command, _ []string) error {
+
+	shl := setupShell()
+	dmn := setupDaemon(shl)
+
 	fmt.Fprintln(config.SysConfig.Out, "Starting LDA daemon...")
-	if err := daemon.StartDaemon(); err != nil {
+	if err := dmn.StartDaemon(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to start daemon")
 		return errors.Wrap(err, "failed to start LDA daemon")
 	}
@@ -171,8 +199,12 @@ func start(_ *cobra.Command, _ []string) error {
 }
 
 func stop(_ *cobra.Command, _ []string) error {
+
+	shl := setupShell()
+	dmn := setupDaemon(shl)
+
 	fmt.Fprintln(config.SysConfig.Out, "Stopping LDA daemon...")
-	if err := daemon.StopDaemon(); err != nil {
+	if err := dmn.StopDaemon(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to stop daemon")
 		return errors.Wrap(err, "failed to stop LDA daemon")
 	}
@@ -181,18 +213,22 @@ func stop(_ *cobra.Command, _ []string) error {
 }
 
 func install(_ *cobra.Command, _ []string) error {
+
+	shl := setupShell()
+	dmn := setupDaemon(shl)
+
 	fmt.Fprintln(config.SysConfig.Out, "Installing LDA daemon...")
-	if err := daemon.InstallDaemonConfiguration(); err != nil {
+	if err := dmn.InstallDaemonConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to install daemon configuration")
 		return errors.Wrap(err, "failed to install LDA daemon configuration file")
 	}
 
-	if err := shell.InstallShellConfiguration(); err != nil {
+	if err := shl.InstallShellConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to install shell configuration")
 		return errors.Wrap(err, "failed to install LDA shell configuration files")
 	}
 
-	if err := shell.InjectShellSource(); err != nil {
+	if err := shl.InjectShellSource(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to inject shell source")
 		return errors.Wrap(err, "failed to inject LDA shell source")
 	}
@@ -202,13 +238,17 @@ func install(_ *cobra.Command, _ []string) error {
 }
 
 func uninstall(_ *cobra.Command, _ []string) error {
+
+	shl := setupShell()
+	dmn := setupDaemon(shl)
+
 	fmt.Fprintln(config.SysConfig.Out, "Uninstalling LDA daemon...")
-	if err := daemon.DestroyDaemonConfiguration(); err != nil {
+	if err := dmn.DestroyDaemonConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to uninstall daemon configuration")
 		return errors.Wrap(err, "failed to uninstall LDA daemon configuration file")
 	}
 
-	if err := shell.DeleteShellConfiguration(); err != nil {
+	if err := shl.DeleteShellConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to delete shell configuration")
 		return errors.Wrap(err, "failed to delete LDA shell configuration files")
 	}

@@ -25,6 +25,7 @@ type Collector struct {
 	socketPath       string
 	client           *client.Client
 	logger           zerolog.Logger
+	excludeRegex     string
 	collectionConfig collectionConfig
 	intervalConfig   IntervalConfig
 }
@@ -56,7 +57,7 @@ type collectionConfig struct {
 }
 
 // NewCollector creates a new collector instance
-func NewCollector(socketPath string, client *client.Client, logger zerolog.Logger, config IntervalConfig, process process.SystemProcess) *Collector {
+func NewCollector(socketPath string, client *client.Client, logger zerolog.Logger, config IntervalConfig, excludeRegex string, process process.SystemProcess) *Collector {
 	return &Collector{
 		socketPath: socketPath,
 		client:     client,
@@ -66,6 +67,7 @@ func NewCollector(socketPath string, client *client.Client, logger zerolog.Logge
 			process:         process,
 		},
 		intervalConfig: config,
+		excludeRegex:   excludeRegex,
 	}
 }
 
@@ -274,7 +276,7 @@ func (c *Collector) handleSocketCollection(con net.Conn) error {
 }
 
 func (c *Collector) handleStartCommand(parts []string) error {
-	if !IsCommandAcceptable(parts[1]) {
+	if !IsCommandAcceptable(parts[1], c.excludeRegex) {
 		c.logger.Debug().Msg("Command is not acceptable")
 		return fmt.Errorf("command is not acceptable")
 	}
@@ -298,7 +300,7 @@ func (c *Collector) handleStartCommand(parts []string) error {
 
 func (c *Collector) handleEndCommand(parts []string) error {
 
-	if !IsCommandAcceptable(parts[1]) {
+	if !IsCommandAcceptable(parts[1], c.excludeRegex) {
 		c.logger.Debug().Msg("Command is not acceptable")
 		return fmt.Errorf("command is not acceptable")
 	}

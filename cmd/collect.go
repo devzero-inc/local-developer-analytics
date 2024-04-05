@@ -49,7 +49,7 @@ func collect(_ *cobra.Command, _ []string) error {
 		MaxConcurrentCommands:     config.AppConfig.MaxConcurrentCommands,
 	}
 
-	proccess, err := process.NewFactory(logging.Log).Create(config.AppConfig.ProcessCollectionType)
+	procCol, err := process.NewFactory(logging.Log).Create(config.AppConfig.ProcessCollectionType)
 	if err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to create process collector")
 		return errors.Wrap(err, "failed to create process collector")
@@ -60,7 +60,8 @@ func collect(_ *cobra.Command, _ []string) error {
 		grpcClient,
 		logging.Log,
 		intervalConfig,
-		proccess,
+		config.AppConfig.ExcludeRegex,
+		procCol,
 	)
 
 	collectorInstance.Collect()

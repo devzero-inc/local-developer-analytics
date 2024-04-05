@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"html/template"
 	"lda/config"
-	"lda/logging"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -29,135 +30,158 @@ const (
 //go:embed services/*
 var templateFS embed.FS
 
-// InstallDaemonConfiguration installs the daemon service configuration
-func InstallDaemonConfiguration() error {
-	logging.Log.Info().Msg("Installing daemon service...")
+// Config is the configuration for the daemon service
+type Config struct {
+	ExePath       string
+	ShellLocation string
+	HomeDir       string
+	Os            config.OSType
+	IsRoot        bool
+}
 
-	filePath, templatePath, err := buildConfigurationPath()
+// Daemon is the service that configures background service
+type Daemon struct {
+	config *Config
+	logger zerolog.Logger
+}
+
+// NewDaemon creates a new daemon service
+func NewDaemon(conf *Config, logger zerolog.Logger) *Daemon {
+	return &Daemon{
+		config: conf,
+		logger: logger,
+	}
+}
+
+// InstallDaemonConfiguration installs the daemon service configuration
+func (d *Daemon) InstallDaemonConfiguration() error {
+	d.logger.Info().Msg("Installing daemon service...")
+
+	filePath, templatePath, err := buildConfigurationPath(d.config.Os, d.config.IsRoot, d.config.HomeDir)
 	if err != nil {
 		return err
 	}
 
 	tmpl, err := template.ParseFS(templateFS, templatePath)
 	if err != nil {
-		logging.Log.Err(err).Msg("Failed to parse config template")
+		d.logger.Err(err).Msg("Failed to parse config template")
 		return err
 	}
 
 	var content bytes.Buffer
 	if err := tmpl.Execute(&content, map[string]interface{}{
-		"BinaryPath": config.ExePath,
-		"Shell":      config.ShellLocation,
-		"Home":       config.HomeDir,
+		"BinaryPath": d.config.ExePath,
+		"Shell":      d.config.ShellLocation,
+		"Home":       d.config.HomeDir,
 	}); err != nil {
-		logging.Log.Err(err).Msg("Failed to execute daemon template")
+		d.logger.Err(err).Msg("Failed to execute daemon template")
 		return err
 	}
 
 	if err := os.MkdirAll(filepath.Dir(filePath), DirPermission); err != nil {
-		logging.Log.Err(err).Msg("Failed to create directories for daemon files")
+		d.logger.Err(err).Msg("Failed to create directories for daemon files")
 		return fmt.Errorf("failed to create directories for daemon files: %w", err)
 	}
 
 	if err := os.WriteFile(filePath, content.Bytes(), ServicePermission); err != nil {
-		logging.Log.Err(err).Msg("Failed to write daemon files")
+		d.logger.Err(err).Msg("Failed to write daemon files")
 		return fmt.Errorf("failed to write daemon files: %w", err)
 	}
 
-	logging.Log.Info().Msg("Daemon service installed successfully")
+	d.logger.Info().Msg("Daemon service installed successfully")
 
 	return nil
 }
 
 // DestroyDaemonConfiguration removes the daemon service configuration
-func DestroyDaemonConfiguration() error {
-	logging.Log.Info().Msg("Uninstalling daemon service...")
+func (d *Daemon) DestroyDaemonConfiguration() error {
+	d.logger.Info().Msg("Uninstalling daemon service...")
 
-	filePath, _, err := buildConfigurationPath()
+	filePath, _, err := buildConfigurationPath(d.config.Os, d.config.IsRoot, d.config.HomeDir)
 	if err != nil {
 		return err
 	}
 
 	if err := os.Remove(filePath); err != nil {
-		logging.Log.Err(err).Msg("Failed to remove daemon service file")
+		d.logger.Err(err).Msg("Failed to remove daemon service file")
 		return err
 	}
 
-	logging.Log.Info().Msg("Daemon service file removed successfully")
+	d.logger.Info().Msg("Daemon service file removed successfully")
 
 	return nil
 }
 
 // StartDaemon starts the daemon service
-func StartDaemon() error {
-	logging.Log.Info().Msg("Starting daemon service...")
+func (d *Daemon) StartDaemon() error {
+	d.logger.Info().Msg("Starting daemon service...")
 
-	switch config.OS {
+	switch d.config.Os {
 	case config.Linux:
-		if err := startLinuxDaemon(); err != nil {
-			logging.Log.Err(err).Msg("Failed to start daemon service")
+		if err := startLinuxDaemon(d.config.IsRoot); err != nil {
+			d.logger.Err(err).Msg("Failed to start daemon service")
 			return err
 		}
 	case config.MacOS:
 		if err := startMacOSDaemon(); err != nil {
-			logging.Log.Err(err).Msg("Failed to start daemon service")
+			d.logger.Err(err).Msg("Failed to start daemon service")
 			return err
 		}
 	default:
-		logging.Log.Error().Msg("Unsupported operating system")
+		d.logger.Error().Msg("Unsupported operating system")
 		return fmt.Errorf("unsupported operating system")
 	}
 
-	logging.Log.Info().Msg("Daemon service started successfully")
+	d.logger.Info().Msg("Daemon service started successfully")
 
 	return nil
 }
 
 // StopDaemon stops the daemon service
-func StopDaemon() error {
-	logging.Log.Info().Msg("Stopping daemon service")
+func (d *Daemon) StopDaemon() error {
+	d.logger.Info().Msg("Stopping daemon service")
 
-	switch config.OS {
+	switch d.config.Os {
 	case config.Linux:
-		if err := stopLinuxDaemon(); err != nil {
-			logging.Log.Err(err).Msg("Failed to stop daemon service")
+		if err := stopLinuxDaemon(d.config.IsRoot); err != nil {
+			d.logger.Err(err).Msg("Failed to stop daemon service")
 			return err
 		}
 	case config.MacOS:
-		if err := stopMacOSDaemon(); err != nil {
-			logging.Log.Err(err).Msg("Failed to stop daemon service")
+		if err := stopMacOSDaemon(d.config.HomeDir); err != nil {
+			d.logger.Err(err).Msg("Failed to stop daemon service")
 			return err
 		}
 	default:
-		logging.Log.Error().Msg("Unsupported operating system")
+		d.logger.Error().Msg("Unsupported operating system")
 		return fmt.Errorf("unsupported operating system")
 	}
 
-	logging.Log.Info().Msg("Daemon service stopped successfully")
+	d.logger.Info().Msg("Daemon service stopped successfully")
 
 	return nil
 }
 
 // ReloadDaemon signals the daemon to reload its configuration.
-func ReloadDaemon() error {
-	logging.Log.Info().Msg("Reloading daemon service...")
+func (d *Daemon) ReloadDaemon() error {
+	d.logger.Info().Msg("Reloading daemon service...")
 
-	switch config.OS {
+	switch d.config.Os {
 	case config.Linux:
-		return reloadLinuxDaemon()
+		return reloadLinuxDaemon(d.config.IsRoot)
 	case config.MacOS:
-		return reloadMacOSDaemon()
+		return reloadMacOSDaemon(d.config.HomeDir)
 	default:
-		logging.Log.Error().Msg("Unsupported operating system for reload")
+		d.logger.Error().Msg("Unsupported operating system for reload")
 		return fmt.Errorf("unsupported operating system")
 	}
 
 }
 
 // reloadLinuxDaemon reloads the daemon service on Linux using systemctl.
-func reloadLinuxDaemon() error {
+func reloadLinuxDaemon(isRoot bool) error {
 	cmd := exec.Command("systemctl", "--user", "reload", ServicedName)
-	if config.IsRoot {
+	if isRoot {
 		cmd = exec.Command("systemctl", "reload", ServicedName)
 	}
 
@@ -165,17 +189,15 @@ func reloadLinuxDaemon() error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		logging.Log.Err(err).Msgf("Failed to reload daemon service: %v", stderr.String())
 		return fmt.Errorf("failed to reload daemon service: %v", stderr.String())
 	}
 
-	logging.Log.Info().Msg("Daemon service reloaded successfully")
 	return nil
 }
 
 // reloadMacOSDaemon reloads the daemon service on macOS
-func reloadMacOSDaemon() error {
-	stopErr := stopMacOSDaemon()
+func reloadMacOSDaemon(homeDir string) error {
+	stopErr := stopMacOSDaemon(homeDir)
 	if stopErr != nil {
 		return stopErr
 	}
@@ -184,18 +206,17 @@ func reloadMacOSDaemon() error {
 		return startErr
 	}
 
-	logging.Log.Info().Msg("Daemon service reloaded successfully")
 	return nil
 }
 
 // startLinuxDaemon starts the daemon service on Linux
-func startLinuxDaemon() error {
-	if !checkLogindService() && !config.IsRoot {
+func startLinuxDaemon(isRoot bool) error {
+	if !checkLogindService() && !isRoot {
 		return fmt.Errorf("logind service is not available, and you need to be root to enable the daemon service, or enable logind service manually")
 	}
 
 	enableCmd := exec.Command("systemctl", "--user", "enable", ServicedName)
-	if config.IsRoot {
+	if isRoot {
 		enableCmd = exec.Command("systemctl", "enable", ServicedName)
 	}
 	var stderr bytes.Buffer
@@ -206,7 +227,7 @@ func startLinuxDaemon() error {
 	}
 
 	cmd := exec.Command("systemctl", "--user", "start", ServicedName)
-	if config.IsRoot {
+	if isRoot {
 		cmd = exec.Command("systemctl", "start", ServicedName)
 	}
 	cmd.Stderr = &stderr
@@ -234,9 +255,9 @@ func startMacOSDaemon() error {
 }
 
 // stopLinuxDaemon stops the daemon service on Linux
-func stopLinuxDaemon() error {
+func stopLinuxDaemon(isRoot bool) error {
 	cmd := exec.Command("systemctl", "--user", "stop", ServicedName)
-	if config.IsRoot {
+	if isRoot {
 		cmd = exec.Command("systemctl", "stop", ServicedName)
 	}
 
@@ -251,8 +272,8 @@ func stopLinuxDaemon() error {
 }
 
 // stopMacOSDaemon stops the daemon service on macOS
-func stopMacOSDaemon() error {
-	path := filepath.Join(config.HomeDir, PlistFilePath, PlistName)
+func stopMacOSDaemon(homeDir string) error {
+	path := filepath.Join(homeDir, PlistFilePath, PlistName)
 	cmd := exec.Command("launchctl", "unload", "-w", path)
 
 	var stderr bytes.Buffer
@@ -266,28 +287,26 @@ func stopMacOSDaemon() error {
 }
 
 // buildConfigurationPath builds the path to the daemon service configuration file, and the template
-func buildConfigurationPath() (string, string, error) {
+func buildConfigurationPath(os config.OSType, isRoot bool, homeDir string) (string, string, error) {
 	var filePath string
 	var templateLocation string
 
-	switch config.OS {
+	switch os {
 	case config.Linux:
-		servicePath := filepath.Join(config.HomeDir, UserServicedFilePath)
+		servicePath := filepath.Join(homeDir, UserServicedFilePath)
 
-		if !checkLogindService() && !config.IsRoot {
-			logging.Log.Info().
-				Msg("You need to be root to install the daemon service, or enable logind service manually")
+		if !checkLogindService() && !isRoot {
 			return "", "", fmt.Errorf("logind service is not available")
 		}
 
-		if config.IsRoot {
+		if isRoot {
 			servicePath = RootServicedFilePath
 		}
 
 		filePath = filepath.Join(servicePath, ServicedName)
 		templateLocation = LinuxDaemonTemplateLocation
 	case config.MacOS:
-		filePath = filepath.Join(config.HomeDir, PlistFilePath, PlistName)
+		filePath = filepath.Join(homeDir, PlistFilePath, PlistName)
 		templateLocation = MacOSDaemonTemplateLocation
 	default:
 		return "", "", fmt.Errorf("unsupported operating system")
@@ -307,7 +326,6 @@ func checkLogindService() bool {
 	logindStatus := stderr.String()
 
 	if err != nil || logindStatus == "masked" || logindStatus == "disabled" {
-		logging.Log.Info().Msgf("Logind service is not available, status: %s", logindStatus)
 		return false
 	}
 
