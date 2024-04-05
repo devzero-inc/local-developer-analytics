@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"lda/util"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -83,9 +84,8 @@ func SetupHomeDir() {
 
 // SetupLdaDir sets the directory for the shell configuration
 func SetupLdaDir() {
-
 	dir := filepath.Join(HomeDir, ".lda")
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
+	if err := util.CreateDirAndChown(dir, os.ModePerm, SudoExecUser); err != nil {
 		fmt.Fprintf(SysConfig.ErrOut, "Failed to create LDA home directory: %s\n", err)
 		os.Exit(1)
 	}

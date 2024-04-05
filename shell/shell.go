@@ -7,6 +7,7 @@ import (
 	"lda/collector"
 	"lda/util"
 	"os"
+	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -72,13 +73,14 @@ type Shell struct {
 	ShellType     Type
 	ShellLocation string
 	isRoot        bool
+	SudoExecUser  *user.User
 	logger        zerolog.Logger
 	ldaDir        string
 	homeDir       string
 }
 
 // NewShell creates a new shell configuration
-func NewShell(logger zerolog.Logger, isRoot bool, ldaDir string, homeDir string) (*Shell, error) {
+func NewShell(logger zerolog.Logger, isRoot bool, ldaDir string, homeDir string, sudoExecUser *user.User) (*Shell, error) {
 
 	shellType, shellLocation, err := setupShell()
 
@@ -93,6 +95,7 @@ func NewShell(logger zerolog.Logger, isRoot bool, ldaDir string, homeDir string)
 		isRoot:        isRoot,
 		ldaDir:        ldaDir,
 		homeDir:       homeDir,
+		SudoExecUser:  sudoExecUser,
 	}, nil
 }
 
@@ -165,7 +168,7 @@ func (s *Shell) InstallShellConfiguration() error {
 		return err
 	}
 
-	if err := os.WriteFile(collectorFilePath, cmdContent.Bytes(), execPermissions); err != nil {
+	if err := util.WriteFileAndChown(collectorFilePath, cmdContent.Bytes(), execPermissions, s.SudoExecUser); err != nil {
 		s.logger.Err(err).Msg("Failed to write collector files")
 		return err
 	}
@@ -190,7 +193,7 @@ func (s *Shell) InstallShellConfiguration() error {
 		return err
 	}
 
-	if err := os.WriteFile(filePath, shellContent.Bytes(), execPermissions); err != nil {
+	if err := util.WriteFileAndChown(filePath, shellContent.Bytes(), execPermissions, s.SudoExecUser); err != nil {
 		s.logger.Err(err).Msg("Failed to write shell files")
 		return err
 	}

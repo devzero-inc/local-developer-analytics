@@ -133,7 +133,7 @@ func setupConfig() {
 }
 
 func setupShell() *shell.Shell {
-	shl, err := shell.NewShell(logging.Log, config.IsRoot, config.LdaDir, config.HomeDir)
+	shl, err := shell.NewShell(logging.Log, config.IsRoot, config.LdaDir, config.HomeDir, config.SudoExecUser)
 
 	if err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to setup shell")
@@ -152,6 +152,7 @@ func setupDaemon(shl *shell.Shell) *daemon.Daemon {
 		IsRoot:        config.IsRoot,
 		Os:            config.OS,
 		ShellLocation: shl.ShellLocation,
+		SudoExecUser:  config.SudoExecUser,
 	}
 	return daemon.NewDaemon(daemonConf, logging.Log)
 }

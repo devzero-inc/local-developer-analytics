@@ -8,6 +8,7 @@ import (
 	"lda/config"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 
 	"github.com/rs/zerolog"
@@ -15,6 +16,7 @@ import (
 
 const (
 	PlistFilePath               = "Library/LaunchAgents"
+	PlistSudoFilePath           = "/Library/LaunchAgents"
 	PlistName                   = "lda.plist"
 	UserServicedFilePath        = ".config/systemd/user"
 	RootServicedFilePath        = "/etc/systemd/system"
@@ -37,6 +39,7 @@ type Config struct {
 	HomeDir       string
 	Os            config.OSType
 	IsRoot        bool
+	SudoExecUser  *user.User
 }
 
 // Daemon is the service that configures background service
@@ -69,11 +72,23 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 	}
 
 	var content bytes.Buffer
-	if err := tmpl.Execute(&content, map[string]interface{}{
+	var tmpConf = map[string]interface{}{
 		"BinaryPath": d.config.ExePath,
 		"Shell":      d.config.ShellLocation,
 		"Home":       d.config.HomeDir,
-	}); err != nil {
+	}
+
+	if d.config.SudoExecUser != nil {
+		tmpConf["Username"] = d.config.SudoExecUser.Username
+
+		group, err := user.LookupGroupId(d.config.SudoExecUser.Gid)
+		if err != nil {
+			return err
+		}
+		tmpConf["Group"] = group.Name
+	}
+
+	if err := tmpl.Execute(&content, tmpConf); err != nil {
 		d.logger.Err(err).Msg("Failed to execute daemon template")
 		return err
 	}
@@ -241,7 +256,11 @@ func startLinuxDaemon(isRoot bool) error {
 
 // startMacOSDaemon starts the daemon service on macOS
 func startMacOSDaemon() error {
-	path := filepath.Join(config.HomeDir, PlistFilePath, PlistName)
+	servicePath := filepath.Join(config.HomeDir, PlistFilePath)
+	if config.IsRoot {
+		servicePath = PlistSudoFilePath
+	}
+	path := filepath.Join(servicePath, PlistName)
 	cmd := exec.Command("launchctl", "load", "-w", path)
 
 	var stderr bytes.Buffer
@@ -273,7 +292,11 @@ func stopLinuxDaemon(isRoot bool) error {
 
 // stopMacOSDaemon stops the daemon service on macOS
 func stopMacOSDaemon(homeDir string) error {
-	path := filepath.Join(homeDir, PlistFilePath, PlistName)
+	servicePath := filepath.Join(homeDir, PlistFilePath)
+	if config.IsRoot {
+		servicePath = PlistSudoFilePath
+	}
+	path := filepath.Join(servicePath, PlistName)
 	cmd := exec.Command("launchctl", "unload", "-w", path)
 
 	var stderr bytes.Buffer
@@ -306,7 +329,13 @@ func buildConfigurationPath(os config.OSType, isRoot bool, homeDir string) (stri
 		filePath = filepath.Join(servicePath, ServicedName)
 		templateLocation = LinuxDaemonTemplateLocation
 	case config.MacOS:
-		filePath = filepath.Join(homeDir, PlistFilePath, PlistName)
+		servicePath := filepath.Join(homeDir, PlistFilePath)
+
+		if isRoot {
+			servicePath = PlistSudoFilePath
+		}
+
+		filePath = filepath.Join(servicePath, PlistName)
 		templateLocation = MacOSDaemonTemplateLocation
 	default:
 		return "", "", fmt.Errorf("unsupported operating system")

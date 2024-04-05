@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"lda/config"
+	"lda/util"
 	"os"
 	"path/filepath"
 
@@ -23,5 +24,11 @@ func Setup() {
 		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to setup database: %s\n", err)
 		os.Exit(1)
 	}
+
+	if err := util.ChangeFileOwnership(dbPath, config.SudoExecUser); err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to change ownership of database: %s\n", err)
+		os.Exit(1)
+	}
+
 	DB = db
 }

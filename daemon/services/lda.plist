@@ -11,6 +11,8 @@
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>UserName</key>
+    <string>{{.Username}}</string>
     <key>EnvironmentVariables</key>
         <dict>
             <key>SHELL</key>
