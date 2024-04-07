@@ -5,10 +5,10 @@ import (
 	"embed"
 	"fmt"
 	"lda/collector"
+	"lda/config"
 	"lda/util"
 	"os"
 	"os/user"
-	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -25,27 +25,24 @@ const (
 )
 
 var (
-	// List of supported shells
-	supportedShells = []string{"/bin/bash", "/bin/zsh", "/bin/fish"}
-
-	templateSources = map[Type]string{
-		Zsh:  "scripts/zsh.sh",
-		Bash: "scripts/bash.sh",
-		Fish: "scripts/fish.sh",
+	templateSources = map[config.ShellType]string{
+		config.Zsh:  "scripts/zsh.sh",
+		config.Bash: "scripts/bash.sh",
+		config.Fish: "scripts/fish.sh",
 	}
 
-	sourceScripts = map[Type]string{
-		Zsh: `
+	sourceScripts = map[config.ShellType]string{
+		config.Zsh: `
 # LDA shell source
 if [ -f "$HOME/.lda/lda.sh" ]; then
     source "$HOME/.lda/lda.sh"
 fi`,
-		Bash: `
+		config.Bash: `
 # LDA shell source
 if [ -f "$HOME/.lda/lda.sh" ]; then
     source "$HOME/.lda/lda.sh"
 fi`,
-		Fish: `
+		config.Fish: `
 # LDA shell source
 if test -f "$HOME/.lda/lda.sh"
     source "$HOME/.lda/lda.sh"
@@ -58,101 +55,37 @@ end`,
 	templateFS embed.FS
 )
 
-// Type is the type of the shell that is supported
-type Type int
-
-const (
-	Bash Type = 0
-	Zsh  Type = 1
-	Fish Type = 2
-	Sh   Type = 3
-)
+// Config is the configuration for the shell
+type Config struct {
+	ShellType     config.ShellType
+	ShellLocation string
+	IsRoot        bool
+	SudoExecUser  *user.User
+	LdaDir        string
+	HomeDir       string
+}
 
 // Shell is the shell configuration
 type Shell struct {
-	ShellType     Type
-	ShellLocation string
-	isRoot        bool
-	SudoExecUser  *user.User
-	logger        zerolog.Logger
-	ldaDir        string
-	homeDir       string
+	logger zerolog.Logger
+	Config *Config
 }
 
 // NewShell creates a new shell configuration
-func NewShell(logger zerolog.Logger, isRoot bool, ldaDir string, homeDir string, sudoExecUser *user.User) (*Shell, error) {
-
-	shellType, shellLocation, err := setupShell()
-
-	if err != nil {
-		return nil, err
-	}
+func NewShell(config *Config, logger zerolog.Logger) (*Shell, error) {
 
 	return &Shell{
-		ShellType:     shellType,
-		ShellLocation: shellLocation,
-		logger:        logger,
-		isRoot:        isRoot,
-		ldaDir:        ldaDir,
-		homeDir:       homeDir,
-		SudoExecUser:  sudoExecUser,
+		logger: logger,
+		Config: config,
 	}, nil
-}
-
-// setupShell sets the current active shell and location
-func setupShell() (Type, string, error) {
-
-	shellLocation := os.Getenv("SHELL")
-
-	return configureShell(shellLocation)
-}
-
-func configureShell(shellLocation string) (Type, string, error) {
-	shellType := path.Base(shellLocation)
-
-	var shell Type
-	switch shellType {
-	case "bash":
-		shell = Bash
-	case "zsh":
-		shell = Zsh
-	case "fish":
-		shell = Fish
-		// TODO: consider supporting "sh" and "ash" as well.
-	default:
-		shellLocation, err := promptForShellType()
-		if err != nil {
-			return -1, "", err
-		}
-		return configureShell(shellLocation)
-	}
-
-	return shell, shellLocation, nil
-}
-
-// promptForShellPath prompts the user to confirm the detected shell path or input a new one.
-func promptForShellType() (string, error) {
-
-	prompt := promptui.Select{
-		Label: "We detected an unsupported shell, often this could happen because the script was run as sudo. Currently, we support the following shells. Please select one:",
-		Items: supportedShells,
-	}
-
-	_, result, err := prompt.Run()
-
-	if err != nil {
-		return "", err
-	}
-
-	return result, nil
 }
 
 // InstallShellConfiguration installs the shell configuration
 func (s *Shell) InstallShellConfiguration() error {
 
-	filePath := filepath.Join(s.ldaDir, ldaScript)
+	filePath := filepath.Join(s.Config.LdaDir, ldaScript)
 
-	collectorFilePath := filepath.Join(s.ldaDir, CollectorName)
+	collectorFilePath := filepath.Join(s.Config.LdaDir, CollectorName)
 
 	cmdTmpl, err := template.ParseFS(templateFS, CollectorScript)
 	if err != nil {
@@ -168,12 +101,12 @@ func (s *Shell) InstallShellConfiguration() error {
 		return err
 	}
 
-	if err := util.WriteFileAndChown(collectorFilePath, cmdContent.Bytes(), execPermissions, s.SudoExecUser); err != nil {
+	if err := util.WriteFileAndChown(collectorFilePath, cmdContent.Bytes(), execPermissions, s.Config.SudoExecUser); err != nil {
 		s.logger.Err(err).Msg("Failed to write collector files")
 		return err
 	}
 
-	shellTmplLocation, ok := templateSources[s.ShellType]
+	shellTmplLocation, ok := templateSources[s.Config.ShellType]
 	if !ok {
 		s.logger.Error().Msg("Unsupported shell")
 		return fmt.Errorf("unsupported shell located")
@@ -193,7 +126,7 @@ func (s *Shell) InstallShellConfiguration() error {
 		return err
 	}
 
-	if err := util.WriteFileAndChown(filePath, shellContent.Bytes(), execPermissions, s.SudoExecUser); err != nil {
+	if err := util.WriteFileAndChown(filePath, shellContent.Bytes(), execPermissions, s.Config.SudoExecUser); err != nil {
 		s.logger.Err(err).Msg("Failed to write shell files")
 		return err
 	}
@@ -206,14 +139,14 @@ func (s *Shell) InstallShellConfiguration() error {
 // DeleteShellConfiguration removes the shell configuration
 func (s *Shell) DeleteShellConfiguration() error {
 
-	filePath := filepath.Join(s.ldaDir, "lda.sh")
+	filePath := filepath.Join(s.Config.LdaDir, "lda.sh")
 
 	if err := os.Remove(filePath); err != nil {
 		s.logger.Err(err).Msg("Failed to remove shell configuration")
 		return err
 	}
 
-	filePath = filepath.Join(s.ldaDir, "collector.sh")
+	filePath = filepath.Join(s.Config.LdaDir, "collector.sh")
 	if err := os.Remove(filePath); err != nil {
 		s.logger.Err(err).Msg("Failed to remove shell configuration")
 		return err
@@ -229,27 +162,27 @@ func (s *Shell) InjectShellSource() error {
 	s.logger.Info().Msg("Installing shell source")
 
 	var shellConfigFile string
-	switch s.ShellType {
-	case Zsh:
-		shellConfigFile = filepath.Join(s.homeDir, ".zshrc")
-	case Bash:
-		shellConfigFile = filepath.Join(s.homeDir, ".bashrc")
-	case Fish:
-		shellConfigFile = filepath.Join(s.homeDir, ".config/fish/config.fish")
+	switch s.Config.ShellType {
+	case config.Zsh:
+		shellConfigFile = filepath.Join(s.Config.HomeDir, ".zshrc")
+	case config.Bash:
+		shellConfigFile = filepath.Join(s.Config.HomeDir, ".bashrc")
+	case config.Fish:
+		shellConfigFile = filepath.Join(s.Config.HomeDir, ".config/fish/config.fish")
 	default:
 		s.logger.Error().Msg("Unsupported shell")
 		return fmt.Errorf("unsupported shell")
 	}
 
-	if s.isRoot {
-		config, err := promptForShellPath(shellConfigFile)
+	if s.Config.IsRoot {
+		conf, err := promptForShellPath(shellConfigFile)
 		if err != nil {
 			return err
 		}
-		shellConfigFile = config
+		shellConfigFile = conf
 	}
 
-	source, ok := sourceScripts[s.ShellType]
+	source, ok := sourceScripts[s.Config.ShellType]
 	if !ok {
 		s.logger.Error().Msg("Unsupported shell")
 		return fmt.Errorf("unsupported shell")

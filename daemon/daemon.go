@@ -71,10 +71,15 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 		return err
 	}
 
+	_, shellLocation, err := config.GetShell()
+	if err != nil {
+		return err
+	}
+
 	var content bytes.Buffer
 	var tmpConf = map[string]interface{}{
 		"BinaryPath": d.config.ExePath,
-		"Shell":      d.config.ShellLocation,
+		"Shell":      shellLocation,
 		"Home":       d.config.HomeDir,
 	}
 

@@ -11,6 +11,7 @@ func RunMigrations() {
 	ensureMigrationTableExists()
 	createProcessesTable()
 	createCommandsTable()
+	createConfigTable()
 }
 
 func ensureMigrationTableExists() {
@@ -72,6 +73,29 @@ func createCommandsTable() {
 		_, err := DB.Exec(createCommandsTableSQL)
 		if err != nil {
 			fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create commands table: %s\n", err)
+			os.Exit(1)
+		}
+		recordMigration(migrationName)
+	}
+}
+
+func createConfigTable() {
+	migrationName := "create_config_table"
+	if !migrationApplied(migrationName) {
+		createConfigTableSQL := `
+		CREATE TABLE IF NOT EXISTS config (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			os TEXT NOT NULL,
+			os_name TEXT NOT NULL,
+			home_dir TEXT NOT NULL,
+			lda_dir TEXT NOT NULL,
+			is_root BOOLEAN NOT NULL,
+			exe_path TEXT NOT NULL
+		);`
+
+		_, err := DB.Exec(createConfigTableSQL)
+		if err != nil {
+			fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create config table: %s\n", err)
 			os.Exit(1)
 		}
 		recordMigration(migrationName)

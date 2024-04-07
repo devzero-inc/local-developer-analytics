@@ -9,6 +9,7 @@ import (
 	"lda/logging"
 	"lda/resources"
 	"lda/shell"
+	"lda/user"
 	"net/http"
 	"os"
 
@@ -130,10 +131,28 @@ func setupConfig() {
 	// setup database and run migrations
 	database.Setup()
 	database.RunMigrations()
+
+	user.CheckAndConfigureGlobals()
 }
 
 func setupShell() *shell.Shell {
-	shl, err := shell.NewShell(logging.Log, config.IsRoot, config.LdaDir, config.HomeDir, config.SudoExecUser)
+
+	shellType, shellLocation, err := config.GetShell()
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to setup shell")
+		os.Exit(1)
+	}
+
+	shellConfig := &shell.Config{
+		ShellType:     shellType,
+		ShellLocation: shellLocation,
+		IsRoot:        config.IsRoot,
+		SudoExecUser:  config.SudoExecUser,
+		LdaDir:        config.LdaDir,
+		HomeDir:       config.HomeDir,
+	}
+
+	shl, err := shell.NewShell(shellConfig, logging.Log)
 
 	if err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to setup shell")
@@ -144,15 +163,14 @@ func setupShell() *shell.Shell {
 }
 
 // setupDaemon initializes the daemon runner with basic configuration
-func setupDaemon(shl *shell.Shell) *daemon.Daemon {
+func setupDaemon() *daemon.Daemon {
 
 	daemonConf := &daemon.Config{
-		ExePath:       config.ExePath,
-		HomeDir:       config.HomeDir,
-		IsRoot:        config.IsRoot,
-		Os:            config.OS,
-		ShellLocation: shl.ShellLocation,
-		SudoExecUser:  config.SudoExecUser,
+		ExePath:      config.ExePath,
+		HomeDir:      config.HomeDir,
+		IsRoot:       config.IsRoot,
+		Os:           config.OS,
+		SudoExecUser: config.SudoExecUser,
 	}
 	return daemon.NewDaemon(daemonConf, logging.Log)
 }
@@ -173,8 +191,7 @@ func lda(cmd *cobra.Command, _ []string) {
 
 func reload(_ *cobra.Command, _ []string) error {
 
-	shl := setupShell()
-	dmn := setupDaemon(shl)
+	dmn := setupDaemon()
 
 	fmt.Fprintln(config.SysConfig.Out, "Reloading LDA daemon...")
 	if err := dmn.ReloadDaemon(); err != nil {
@@ -187,8 +204,7 @@ func reload(_ *cobra.Command, _ []string) error {
 
 func start(_ *cobra.Command, _ []string) error {
 
-	shl := setupShell()
-	dmn := setupDaemon(shl)
+	dmn := setupDaemon()
 
 	fmt.Fprintln(config.SysConfig.Out, "Starting LDA daemon...")
 	if err := dmn.StartDaemon(); err != nil {
@@ -201,8 +217,7 @@ func start(_ *cobra.Command, _ []string) error {
 
 func stop(_ *cobra.Command, _ []string) error {
 
-	shl := setupShell()
-	dmn := setupDaemon(shl)
+	dmn := setupDaemon()
 
 	fmt.Fprintln(config.SysConfig.Out, "Stopping LDA daemon...")
 	if err := dmn.StopDaemon(); err != nil {
@@ -215,14 +230,15 @@ func stop(_ *cobra.Command, _ []string) error {
 
 func install(_ *cobra.Command, _ []string) error {
 
-	shl := setupShell()
-	dmn := setupDaemon(shl)
+	dmn := setupDaemon()
 
 	fmt.Fprintln(config.SysConfig.Out, "Installing LDA daemon...")
 	if err := dmn.InstallDaemonConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to install daemon configuration")
 		return errors.Wrap(err, "failed to install LDA daemon configuration file")
 	}
+
+	shl := setupShell()
 
 	if err := shl.InstallShellConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to install shell configuration")
@@ -241,7 +257,7 @@ func install(_ *cobra.Command, _ []string) error {
 func uninstall(_ *cobra.Command, _ []string) error {
 
 	shl := setupShell()
-	dmn := setupDaemon(shl)
+	dmn := setupDaemon()
 
 	fmt.Fprintln(config.SysConfig.Out, "Uninstalling LDA daemon...")
 	if err := dmn.DestroyDaemonConfiguration(); err != nil {

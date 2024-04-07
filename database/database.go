@@ -21,7 +21,7 @@ func Setup() {
 
 	db, err := sqlx.Connect("sqlite3", dbPath)
 	if err != nil {
-		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to setup database: %s\n", err)
+		fmt.Printf("Failed to setup database: %s\n", err)
 		os.Exit(1)
 	}
 
