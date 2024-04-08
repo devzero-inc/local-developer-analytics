@@ -16,7 +16,7 @@ import (
 
 const (
 	PlistFilePath               = "Library/LaunchAgents"
-	PlistSudoFilePath           = "/Library/LaunchAgents"
+	PlistSudoFilePath           = "/Library/LaunchDaemons"
 	PlistName                   = "lda.plist"
 	UserServicedFilePath        = ".config/systemd/user"
 	RootServicedFilePath        = "/etc/systemd/system"
@@ -71,15 +71,10 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 		return err
 	}
 
-	_, shellLocation, err := config.GetShell()
-	if err != nil {
-		return err
-	}
-
 	var content bytes.Buffer
 	var tmpConf = map[string]interface{}{
 		"BinaryPath": d.config.ExePath,
-		"Shell":      shellLocation,
+		"Shell":      d.config.ShellLocation,
 		"Home":       d.config.HomeDir,
 	}
 
@@ -143,7 +138,7 @@ func (d *Daemon) StartDaemon() error {
 			return err
 		}
 	case config.MacOS:
-		if err := startMacOSDaemon(); err != nil {
+		if err := startMacOSDaemon(d.config.HomeDir, d.config.IsRoot); err != nil {
 			d.logger.Err(err).Msg("Failed to start daemon service")
 			return err
 		}
@@ -168,7 +163,7 @@ func (d *Daemon) StopDaemon() error {
 			return err
 		}
 	case config.MacOS:
-		if err := stopMacOSDaemon(d.config.HomeDir); err != nil {
+		if err := stopMacOSDaemon(d.config.HomeDir, d.config.IsRoot); err != nil {
 			d.logger.Err(err).Msg("Failed to stop daemon service")
 			return err
 		}
@@ -190,7 +185,7 @@ func (d *Daemon) ReloadDaemon() error {
 	case config.Linux:
 		return reloadLinuxDaemon(d.config.IsRoot)
 	case config.MacOS:
-		return reloadMacOSDaemon(d.config.HomeDir)
+		return reloadMacOSDaemon(d.config.HomeDir, d.config.IsRoot)
 	default:
 		d.logger.Error().Msg("Unsupported operating system for reload")
 		return fmt.Errorf("unsupported operating system")
@@ -216,12 +211,12 @@ func reloadLinuxDaemon(isRoot bool) error {
 }
 
 // reloadMacOSDaemon reloads the daemon service on macOS
-func reloadMacOSDaemon(homeDir string) error {
-	stopErr := stopMacOSDaemon(homeDir)
+func reloadMacOSDaemon(homeDir string, isRoot bool) error {
+	stopErr := stopMacOSDaemon(homeDir, isRoot)
 	if stopErr != nil {
 		return stopErr
 	}
-	startErr := startMacOSDaemon()
+	startErr := startMacOSDaemon(homeDir, isRoot)
 	if startErr != nil {
 		return startErr
 	}
@@ -260,9 +255,9 @@ func startLinuxDaemon(isRoot bool) error {
 }
 
 // startMacOSDaemon starts the daemon service on macOS
-func startMacOSDaemon() error {
-	servicePath := filepath.Join(config.HomeDir, PlistFilePath)
-	if config.IsRoot {
+func startMacOSDaemon(homeDir string, isRoot bool) error {
+	servicePath := filepath.Join(homeDir, PlistFilePath)
+	if isRoot {
 		servicePath = PlistSudoFilePath
 	}
 	path := filepath.Join(servicePath, PlistName)
@@ -296,9 +291,9 @@ func stopLinuxDaemon(isRoot bool) error {
 }
 
 // stopMacOSDaemon stops the daemon service on macOS
-func stopMacOSDaemon(homeDir string) error {
+func stopMacOSDaemon(homeDir string, isRoot bool) error {
 	servicePath := filepath.Join(homeDir, PlistFilePath)
-	if config.IsRoot {
+	if isRoot {
 		servicePath = PlistSudoFilePath
 	}
 	path := filepath.Join(servicePath, PlistName)

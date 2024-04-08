@@ -6,6 +6,7 @@ import (
 	"io"
 	"lda/util"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -68,12 +69,12 @@ func SetupSysConfig() {
 }
 
 // SetupConfig initialize the configuration instance
-func SetupConfig() {
+func SetupConfig(ldaDir string, user *user.User) {
 
-	configPath := filepath.Join(LdaDir, "config.toml")
+	configPath := filepath.Join(ldaDir, "config.toml")
 
 	if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
-		if err := util.WriteFileAndChown(configPath, []byte(configExample), 0644, SudoExecUser); err != nil {
+		if err := util.WriteFileAndChown(configPath, []byte(configExample), 0644, user); err != nil {
 			fmt.Fprintf(SysConfig.ErrOut, "Failed to create config file: %s\n", err)
 		}
 	}

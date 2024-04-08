@@ -90,7 +90,9 @@ func createConfigTable() {
 			home_dir TEXT NOT NULL,
 			lda_dir TEXT NOT NULL,
 			is_root BOOLEAN NOT NULL,
-			exe_path TEXT NOT NULL
+			exe_path TEXT NOT NULL,
+			shell_type INTEGER NOT NULL,
+			shell_location TEXT NOT NULL
 		);`
 
 		_, err := DB.Exec(createConfigTableSQL)

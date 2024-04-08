@@ -6,6 +6,7 @@ import (
 	"lda/config"
 	"lda/logging"
 	"lda/process"
+	"lda/user"
 	"time"
 
 	"github.com/pkg/errors"
@@ -25,8 +26,15 @@ var (
 
 func collect(_ *cobra.Command, _ []string) error {
 
-	var grpcClient *client.Client
 	var err error
+
+	user.Conf, err = user.GetConfig()
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to get os config")
+		return errors.Wrap(err, "failed to get os config, please run 'lda install' first")
+	}
+
+	var grpcClient *client.Client
 	if config.AppConfig.RemoteCollection {
 		logging.Log.Info().Msg("Remote collection is enabled")
 		grpcConfig := client.Config{

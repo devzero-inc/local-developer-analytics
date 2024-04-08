@@ -190,7 +190,7 @@ func (s *Shell) InjectShellSource() error {
 
 	s.logger.Debug().Msgf("Shell config file: %s", shellConfigFile)
 	// Check if the script is already present to avoid duplicates
-	if !util.IsScriptPresent(shellConfigFile, source) {
+	if !util.IsScriptPresent(shellConfigFile, "LDA shell source") {
 		if err := util.AppendToFile(shellConfigFile, source); err != nil {
 			s.logger.Error().Msg("Failed to append to the file")
 			return err
