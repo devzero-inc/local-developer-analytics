@@ -167,11 +167,12 @@ func reload(_ *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:      user.Conf.ExePath,
-		HomeDir:      user.Conf.HomeDir,
-		IsRoot:       user.Conf.IsRoot,
-		Os:           config.OSType(user.Conf.Os),
-		SudoExecUser: user.Conf.User,
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
@@ -189,11 +190,12 @@ func start(_ *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:      user.Conf.ExePath,
-		HomeDir:      user.Conf.HomeDir,
-		IsRoot:       user.Conf.IsRoot,
-		Os:           config.OSType(user.Conf.Os),
-		SudoExecUser: user.Conf.User,
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
@@ -211,11 +213,12 @@ func stop(_ *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:      user.Conf.ExePath,
-		HomeDir:      user.Conf.HomeDir,
-		IsRoot:       user.Conf.IsRoot,
-		Os:           config.OSType(user.Conf.Os),
-		SudoExecUser: user.Conf.User,
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
@@ -233,11 +236,12 @@ func install(_ *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:      user.Conf.ExePath,
-		HomeDir:      user.Conf.HomeDir,
-		IsRoot:       user.Conf.IsRoot,
-		Os:           config.OSType(user.Conf.Os),
-		SudoExecUser: user.Conf.User,
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
@@ -282,11 +286,12 @@ func uninstall(_ *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:      user.Conf.ExePath,
-		HomeDir:      user.Conf.HomeDir,
-		IsRoot:       user.Conf.IsRoot,
-		Os:           config.OSType(user.Conf.Os),
-		SudoExecUser: user.Conf.User,
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
