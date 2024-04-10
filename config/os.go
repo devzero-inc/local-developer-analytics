@@ -31,7 +31,7 @@ const (
 )
 
 // GetUserConfig returns the user configuration
-func GetUserConfig() (*user.User, bool) {
+func GetUserConfig() (*user.User, bool, error) {
 	isRoot := os.Geteuid() == 0
 
 	sudoUser := os.Getenv("SUDO_USER")
@@ -39,18 +39,17 @@ func GetUserConfig() (*user.User, bool) {
 	if isRoot && sudoUser != "" {
 		originalUser, err := user.Lookup(sudoUser)
 		if err != nil {
-			fmt.Fprintf(SysConfig.ErrOut, "Failed to get user that executed sudo: %s\n", err)
-			os.Exit(1)
+			return nil, isRoot, err
 		}
 
-		return originalUser, isRoot
+		return originalUser, isRoot, nil
 	}
 
-	return nil, isRoot
+	return nil, isRoot, nil
 }
 
 // GetOS returns the operating system
-func GetOS() (OSType, string) {
+func GetOS() (OSType, string, error) {
 	osName := runtime.GOOS
 	var osType OSType
 	switch osName {
@@ -60,37 +59,34 @@ func GetOS() (OSType, string) {
 		osType = MacOS
 	default:
 		// TODO: check if this will work on WSL, maybe it will?
-		fmt.Fprintf(SysConfig.ErrOut, "Unsupported operating system: %s\n", osName)
-		os.Exit(1)
+		return -1, "", fmt.Errorf("unsupported operating system")
 	}
 
-	return osType, osName
+	return osType, osName, nil
 }
 
 // GetHomeDir returns the user home directory
-func GetHomeDir(isRoot bool, user *user.User) string {
+func GetHomeDir(isRoot bool, user *user.User) (string, error) {
 	if isRoot && user != nil {
-		return user.HomeDir
+		return user.HomeDir, nil
 	}
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Fprintf(SysConfig.ErrOut, "Failed to get user home directory: %s\n", err)
-		os.Exit(1)
+		return "", err
 	}
 
-	return home
+	return home, nil
 }
 
 // GetLdaDir returns the directory for the shell configuration
-func GetLdaDir(homeDir string, user *user.User) string {
+func GetLdaDir(homeDir string, user *user.User) (string, error) {
 	dir := filepath.Join(homeDir, ".lda")
 	if err := util.CreateDirAndChown(dir, os.ModePerm, user); err != nil {
-		fmt.Fprintf(SysConfig.ErrOut, "Failed to create LDA home directory: %s\n", err)
-		os.Exit(1)
+		return "", err
 	}
 
-	return dir
+	return dir, nil
 }
 
 // GetLdaBinaryPath returns the path to the lda binary

@@ -12,7 +12,6 @@ import (
 	"lda/user"
 	"net/http"
 	"os"
-	"reflect"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -111,13 +110,29 @@ func setupConfig() {
 	// setting up the system configuration
 	config.SetupSysConfig()
 
-	sudoExecUser, isRoot := config.GetUserConfig()
-	osConf, osName := config.GetOS()
-	homeDir := config.GetHomeDir(isRoot, sudoExecUser)
-	ldaDir := config.GetLdaDir(homeDir, sudoExecUser)
+	sudoExecUser, isRoot, err := config.GetUserConfig()
+	if err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get user configuration: %s\n", err)
+		os.Exit(1)
+	}
+	osConf, osName, err := config.GetOS()
+	if err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get OS: %s\n", err)
+		os.Exit(1)
+	}
+	homeDir, err := config.GetHomeDir(isRoot, sudoExecUser)
+	if err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get home directory: %s\n", err)
+		os.Exit(1)
+	}
+	ldaDir, err := config.GetLdaDir(homeDir, sudoExecUser)
+	if err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get LDA directory: %s\n", err)
+		os.Exit(1)
+	}
 	exePath, err := config.GetLdaBinaryPath()
 	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to setup lda binary path")
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get executable path: %s\n", err)
 		os.Exit(1)
 	}
 
@@ -335,13 +350,7 @@ func displayConfig(_ *cobra.Command, _ []string) error {
 		return errors.Wrap(err, "failed to get os config, please run 'lda install' first")
 	}
 
-	val := reflect.ValueOf(conf).Elem()
-	typeOfConf := val.Type()
-
-	fmt.Fprintf(config.SysConfig.Out, "Current configuration:\n")
-	for i := 0; i < val.NumField(); i++ {
-		fmt.Fprintf(config.SysConfig.Out, "%s: %v\n", typeOfConf.Field(i).Name, val.Field(i).Interface())
-	}
+	fmt.Fprintf(config.SysConfig.Out, "Current configuration: %+v \n", conf)
 
 	return nil
 }
