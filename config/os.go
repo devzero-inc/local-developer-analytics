@@ -2,13 +2,17 @@ package config
 
 import (
 	"fmt"
+	"lda/util"
 	"os"
+	"os/user"
 	"path"
 	"path/filepath"
 	"runtime"
+
+	"github.com/manifoldco/promptui"
 )
 
-// ShellType is the type of the shell
+// ShellType is the type of the shell that is supported
 type ShellType int
 
 const (
@@ -26,97 +30,121 @@ const (
 	MacOS OSType = 1
 )
 
-var (
-	// OS is the operating system
-	OS OSType
-	// OSName is the name of the operating system
-	OSName string
-	// Shell is the active shell
-	Shell ShellType
-	// ShellLocation is the shell configuration directory
-	ShellLocation string
-	// HomeDir is the user home directory
-	HomeDir string
-	// LdaDir is the home lad directory where all configurations are stored.
-	LdaDir string
-	// IsRoot is a value to check if the user is root
-	IsRoot bool
-	// ExePath is the path to the lda binary
-	ExePath string
-)
+// GetUserConfig returns the user configuration
+func GetUserConfig() (*user.User, bool, error) {
+	isRoot := os.Geteuid() == 0
 
-// SetupOs determine the operating system
-func SetupOs() {
-	OSName = runtime.GOOS
-	switch OSName {
+	sudoUser := os.Getenv("SUDO_USER")
+
+	if isRoot && sudoUser != "" {
+		originalUser, err := user.Lookup(sudoUser)
+		if err != nil {
+			return nil, isRoot, err
+		}
+
+		return originalUser, isRoot, nil
+	}
+
+	return nil, isRoot, nil
+}
+
+// GetOS returns the operating system
+func GetOS() (OSType, string, error) {
+	osName := runtime.GOOS
+	var osType OSType
+	switch osName {
 	case "linux":
-		OS = Linux
+		osType = Linux
 	case "darwin":
-		OS = MacOS
+		osType = MacOS
 	default:
 		// TODO: check if this will work on WSL, maybe it will?
-		fmt.Fprint(SysConfig.ErrOut, "Unsupported operating system")
-		os.Exit(1)
-	}
-}
-
-// SetupShell sets the current active shell
-func SetupShell() {
-
-	ShellLocation = os.Getenv("SHELL")
-
-	shellType := path.Base(ShellLocation)
-
-	switch shellType {
-	case "bash":
-		Shell = Bash
-	case "zsh":
-		Shell = Zsh
-	case "fish":
-		Shell = Fish
-	case "sh":
-		Shell = Sh
-		// TODO: consider supporting "ash" as well.
-	default:
-		fmt.Fprint(SysConfig.ErrOut, "Unsupported shell")
-		os.Exit(1)
+		return -1, "", fmt.Errorf("unsupported operating system")
 	}
 
+	return osType, osName, nil
 }
 
-// SetupHomeDir sets the user home directory
-func SetupHomeDir() {
+// GetHomeDir returns the user home directory
+func GetHomeDir(isRoot bool, user *user.User) (string, error) {
+	if isRoot && user != nil {
+		return user.HomeDir, nil
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Fprintf(SysConfig.ErrOut, "Failed to get user home directory: %s\n", err)
-		os.Exit(1)
-	}
-	HomeDir = home
-}
-
-// SetupLdaDir sets the directory for the shell configuration
-func SetupLdaDir() {
-
-	dir := filepath.Join(HomeDir, ".lda")
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
-		fmt.Fprintf(SysConfig.ErrOut, "Failed to create LDA home directory: %s\n", err)
-		os.Exit(1)
+		return "", err
 	}
 
-	LdaDir = dir
+	return home, nil
 }
 
-// SetupUserConfig sets the user permission level (root or not)
-func SetupUserConfig() {
-	IsRoot = os.Geteuid() == 0
+// GetLdaDir returns the directory for the shell configuration
+func GetLdaDir(homeDir string, user *user.User) (string, error) {
+	dir := filepath.Join(homeDir, ".lda")
+	if err := util.CreateDirAndChown(dir, os.ModePerm, user); err != nil {
+		return "", err
+	}
+
+	return dir, nil
 }
 
-// SetupLdaBinaryPath sets the path to the lda binary
-func SetupLdaBinaryPath() {
+// GetLdaBinaryPath returns the path to the lda binary
+func GetLdaBinaryPath() (string, error) {
 	exePath, err := os.Executable()
 	if err != nil {
-		fmt.Fprintf(SysConfig.ErrOut, "Failed to find executable path: %s\n", err)
-		os.Exit(1)
+		return "", err
 	}
-	ExePath = exePath
+
+	return exePath, nil
+}
+
+// GetShell sets the current active shell and location
+func GetShell() (ShellType, string, error) {
+
+	shellLocation := os.Getenv("SHELL")
+
+	return configureShell(shellLocation)
+}
+
+func configureShell(shellLocation string) (ShellType, string, error) {
+	shellType := path.Base(shellLocation)
+
+	var shell ShellType
+	switch shellType {
+	case "bash":
+		shell = Bash
+	case "zsh":
+		shell = Zsh
+	case "fish":
+		shell = Fish
+		// TODO: consider supporting "sh" and "ash" as well.
+	default:
+		shellLocation, err := promptForShellType()
+		if err != nil {
+			return -1, "", err
+		}
+		return configureShell(shellLocation)
+	}
+
+	return shell, shellLocation, nil
+}
+
+// promptForShellPath prompts the user to confirm the detected shell path or input a new one.
+func promptForShellType() (string, error) {
+
+	supportedShells := []string{"/bin/bash", "/bin/zsh", "/bin/fish"}
+
+	prompt := promptui.Select{
+		Label: "We detected an unsupported shell, often this could happen because the script was run as sudo. Currently, we support the following shells. Please select one:",
+		Items: supportedShells,
+	}
+
+	_, result, err := prompt.Run()
+
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
 }

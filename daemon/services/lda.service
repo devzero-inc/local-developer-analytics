@@ -5,6 +5,8 @@ After=network.target
 [Service]
 Environment="SHELL={{.Shell}}"
 Environment="HOME={{.Home}}"
+User={{.Username}}
+Group={{.Group}}
 Type=simple
 ExecStart={{.BinaryPath}} collect
 Restart=always

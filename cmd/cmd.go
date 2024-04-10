@@ -9,6 +9,7 @@ import (
 	"lda/logging"
 	"lda/resources"
 	"lda/shell"
+	"lda/user"
 	"net/http"
 	"os"
 
@@ -63,6 +64,13 @@ var (
 		RunE:  reload,
 	}
 
+	configCmd = &cobra.Command{
+		Use:   "config",
+		Short: "Print current configuration",
+		Long:  `Display current configuration for LDA Project.`,
+		RunE:  displayConfig,
+	}
+
 	serveCmd = &cobra.Command{
 		Use:   "serve",
 		Short: "Serve local client",
@@ -86,6 +94,7 @@ func init() {
 	ldaCmd.AddCommand(uninstallCmd)
 	ldaCmd.AddCommand(serveCmd)
 	ldaCmd.AddCommand(reloadCmd)
+	ldaCmd.AddCommand(configCmd)
 }
 
 func includeShowFlagsForLda(cmd *cobra.Command) {
@@ -101,29 +110,37 @@ func setupConfig() {
 	// setting up the system configuration
 	config.SetupSysConfig()
 
-	// setting up the operating system
-	config.SetupOs()
-
-	// setting up the shell
-	config.SetupShell()
-
-	// setting up the home directory
-	config.SetupHomeDir()
-
-	// setting up the LDA directory
-	config.SetupLdaDir()
-
-	// setting up the user permission level
-	config.SetupUserConfig()
+	sudoExecUser, isRoot, err := config.GetUserConfig()
+	if err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get user configuration: %s\n", err)
+		os.Exit(1)
+	}
+	osConf, osName, err := config.GetOS()
+	if err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get OS: %s\n", err)
+		os.Exit(1)
+	}
+	homeDir, err := config.GetHomeDir(isRoot, sudoExecUser)
+	if err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get home directory: %s\n", err)
+		os.Exit(1)
+	}
+	ldaDir, err := config.GetLdaDir(homeDir, sudoExecUser)
+	if err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get LDA directory: %s\n", err)
+		os.Exit(1)
+	}
+	exePath, err := config.GetLdaBinaryPath()
+	if err != nil {
+		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get executable path: %s\n", err)
+		os.Exit(1)
+	}
 
 	// setting up optional application configuration
-	config.SetupConfig()
-
-	// setting up the LDA binary path
-	config.SetupLdaBinaryPath()
+	config.SetupConfig(ldaDir, sudoExecUser)
 
 	// setup database and run migrations
-	database.Setup()
+	database.Setup(ldaDir, sudoExecUser)
 	database.RunMigrations()
 
 	// setting up the Logger
@@ -134,6 +151,16 @@ func setupConfig() {
 		logging.Setup(io.Discard, false)
 	}
 
+	// Configure default user globals
+	user.Conf = &user.Config{
+		Os:      int64(osConf),
+		OsName:  osName,
+		HomeDir: homeDir,
+		LdaDir:  ldaDir,
+		IsRoot:  isRoot,
+		ExePath: exePath,
+		User:    sudoExecUser,
+	}
 }
 
 // Execute is the entry point for the command line
@@ -151,8 +178,21 @@ func lda(cmd *cobra.Command, _ []string) {
 }
 
 func reload(_ *cobra.Command, _ []string) error {
+
+	user.ConfigureUserSystemInfo(user.Conf)
+
+	daemonConf := &daemon.Config{
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
+	}
+	dmn := daemon.NewDaemon(daemonConf, logging.Log)
+
 	fmt.Fprintln(config.SysConfig.Out, "Reloading LDA daemon...")
-	if err := daemon.ReloadDaemon(); err != nil {
+	if err := dmn.ReloadDaemon(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to reload daemon")
 		return errors.Wrap(err, "failed to reload LDA daemon")
 	}
@@ -161,8 +201,21 @@ func reload(_ *cobra.Command, _ []string) error {
 }
 
 func start(_ *cobra.Command, _ []string) error {
+
+	user.ConfigureUserSystemInfo(user.Conf)
+
+	daemonConf := &daemon.Config{
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
+	}
+	dmn := daemon.NewDaemon(daemonConf, logging.Log)
+
 	fmt.Fprintln(config.SysConfig.Out, "Starting LDA daemon...")
-	if err := daemon.StartDaemon(); err != nil {
+	if err := dmn.StartDaemon(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to start daemon")
 		return errors.Wrap(err, "failed to start LDA daemon")
 	}
@@ -171,8 +224,21 @@ func start(_ *cobra.Command, _ []string) error {
 }
 
 func stop(_ *cobra.Command, _ []string) error {
+
+	user.ConfigureUserSystemInfo(user.Conf)
+
+	daemonConf := &daemon.Config{
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
+	}
+	dmn := daemon.NewDaemon(daemonConf, logging.Log)
+
 	fmt.Fprintln(config.SysConfig.Out, "Stopping LDA daemon...")
-	if err := daemon.StopDaemon(); err != nil {
+	if err := dmn.StopDaemon(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to stop daemon")
 		return errors.Wrap(err, "failed to stop LDA daemon")
 	}
@@ -181,18 +247,47 @@ func stop(_ *cobra.Command, _ []string) error {
 }
 
 func install(_ *cobra.Command, _ []string) error {
+
+	user.ConfigureUserSystemInfo(user.Conf)
+
+	daemonConf := &daemon.Config{
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
+	}
+	dmn := daemon.NewDaemon(daemonConf, logging.Log)
+
 	fmt.Fprintln(config.SysConfig.Out, "Installing LDA daemon...")
-	if err := daemon.InstallDaemonConfiguration(); err != nil {
+	if err := dmn.InstallDaemonConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to install daemon configuration")
 		return errors.Wrap(err, "failed to install LDA daemon configuration file")
 	}
 
-	if err := shell.InstallShellConfiguration(); err != nil {
+	shellConfig := &shell.Config{
+		ShellType:     config.ShellType(user.Conf.ShellType),
+		ShellLocation: user.Conf.ShellLocation,
+		IsRoot:        user.Conf.IsRoot,
+		SudoExecUser:  user.Conf.User,
+		LdaDir:        user.Conf.LdaDir,
+		HomeDir:       user.Conf.HomeDir,
+	}
+
+	shl, err := shell.NewShell(shellConfig, logging.Log)
+
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to setup shell")
+		os.Exit(1)
+	}
+
+	if err := shl.InstallShellConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to install shell configuration")
 		return errors.Wrap(err, "failed to install LDA shell configuration files")
 	}
 
-	if err := shell.InjectShellSource(); err != nil {
+	if err := shl.InjectShellSource(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to inject shell source")
 		return errors.Wrap(err, "failed to inject LDA shell source")
 	}
@@ -202,13 +297,41 @@ func install(_ *cobra.Command, _ []string) error {
 }
 
 func uninstall(_ *cobra.Command, _ []string) error {
+
+	user.ConfigureUserSystemInfo(user.Conf)
+
+	daemonConf := &daemon.Config{
+		ExePath:       user.Conf.ExePath,
+		HomeDir:       user.Conf.HomeDir,
+		IsRoot:        user.Conf.IsRoot,
+		Os:            config.OSType(user.Conf.Os),
+		SudoExecUser:  user.Conf.User,
+		ShellLocation: user.Conf.ShellLocation,
+	}
+	dmn := daemon.NewDaemon(daemonConf, logging.Log)
+
+	shellConfig := &shell.Config{
+		ShellType:     config.ShellType(user.Conf.ShellType),
+		ShellLocation: user.Conf.ShellLocation,
+		IsRoot:        user.Conf.IsRoot,
+		SudoExecUser:  user.Conf.User,
+		LdaDir:        user.Conf.LdaDir,
+		HomeDir:       user.Conf.HomeDir,
+	}
+	shl, err := shell.NewShell(shellConfig, logging.Log)
+
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to setup shell")
+		os.Exit(1)
+	}
+
 	fmt.Fprintln(config.SysConfig.Out, "Uninstalling LDA daemon...")
-	if err := daemon.DestroyDaemonConfiguration(); err != nil {
+	if err := dmn.DestroyDaemonConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to uninstall daemon configuration")
 		return errors.Wrap(err, "failed to uninstall LDA daemon configuration file")
 	}
 
-	if err := shell.DeleteShellConfiguration(); err != nil {
+	if err := shl.DeleteShellConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to delete shell configuration")
 		return errors.Wrap(err, "failed to delete LDA shell configuration files")
 	}
@@ -216,6 +339,18 @@ func uninstall(_ *cobra.Command, _ []string) error {
 	fmt.Fprintln(config.SysConfig.Out, `Daemon service files and shell configuration deleted successfully, 
 		~/.lda directory still holds database file, and your rc file stills has source script.
 		If you wish to remove those, delete them manually`)
+
+	return nil
+}
+
+func displayConfig(_ *cobra.Command, _ []string) error {
+	conf, err := user.GetConfig()
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to get os config")
+		return errors.Wrap(err, "failed to get os config, please run 'lda install' first")
+	}
+
+	fmt.Fprintf(config.SysConfig.Out, "Current configuration: %+v \n", conf)
 
 	return nil
 }

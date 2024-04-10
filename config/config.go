@@ -4,7 +4,9 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"lda/util"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -14,7 +16,7 @@ import (
 
 // Config config definition
 type Config struct {
-	// Debug persists the debug mode so we don't have to pass it via flag, flag will override this
+	// Debug persists the debug mode, so we don't have to pass it via flag, flag will override this
 	Debug bool `mapstructure:"debug"`
 	// ProcessInterval interval in seconds to tick and collect general information about processes - defaults to 120 seconds
 	ProcessInterval int `mapstructure:"process_interval"`
@@ -67,12 +69,12 @@ func SetupSysConfig() {
 }
 
 // SetupConfig initialize the configuration instance
-func SetupConfig() {
+func SetupConfig(ldaDir string, user *user.User) {
 
-	configPath := filepath.Join(LdaDir, "config.toml")
+	configPath := filepath.Join(ldaDir, "config.toml")
 
 	if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
-		if err := os.WriteFile(configPath, []byte(configExample), 0644); err != nil {
+		if err := util.WriteFileAndChown(configPath, []byte(configExample), 0644, user); err != nil {
 			fmt.Fprintf(SysConfig.ErrOut, "Failed to create config file: %s\n", err)
 		}
 	}

@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"lda/collector"
 	"lda/config"
-	"lda/logging"
 	"lda/util"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strings"
 	"text/template"
+
+	"github.com/manifoldco/promptui"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -51,16 +55,41 @@ end`,
 	templateFS embed.FS
 )
 
+// Config is the configuration for the shell
+type Config struct {
+	ShellType     config.ShellType
+	ShellLocation string
+	IsRoot        bool
+	SudoExecUser  *user.User
+	LdaDir        string
+	HomeDir       string
+}
+
+// Shell is the shell configuration
+type Shell struct {
+	logger zerolog.Logger
+	Config *Config
+}
+
+// NewShell creates a new shell configuration
+func NewShell(config *Config, logger zerolog.Logger) (*Shell, error) {
+
+	return &Shell{
+		logger: logger,
+		Config: config,
+	}, nil
+}
+
 // InstallShellConfiguration installs the shell configuration
-func InstallShellConfiguration() error {
+func (s *Shell) InstallShellConfiguration() error {
 
-	filePath := filepath.Join(config.LdaDir, ldaScript)
+	filePath := filepath.Join(s.Config.LdaDir, ldaScript)
 
-	collectorFilePath := filepath.Join(config.LdaDir, CollectorName)
+	collectorFilePath := filepath.Join(s.Config.LdaDir, CollectorName)
 
 	cmdTmpl, err := template.ParseFS(templateFS, CollectorScript)
 	if err != nil {
-		logging.Log.Err(err).Msg("Failed to parse collector template")
+		s.logger.Err(err).Msg("Failed to parse collector template")
 		return err
 	}
 
@@ -68,24 +97,24 @@ func InstallShellConfiguration() error {
 	if err := cmdTmpl.Execute(&cmdContent, map[string]interface{}{
 		"SocketPath": collector.SocketPath,
 	}); err != nil {
-		logging.Log.Err(err).Msg("Failed to execute cmd template")
+		s.logger.Err(err).Msg("Failed to execute cmd template")
 		return err
 	}
 
-	if err := os.WriteFile(collectorFilePath, cmdContent.Bytes(), execPermissions); err != nil {
-		logging.Log.Err(err).Msg("Failed to write collector files")
+	if err := util.WriteFileAndChown(collectorFilePath, cmdContent.Bytes(), execPermissions, s.Config.SudoExecUser); err != nil {
+		s.logger.Err(err).Msg("Failed to write collector files")
 		return err
 	}
 
-	shellTmplLocation, ok := templateSources[config.Shell]
+	shellTmplLocation, ok := templateSources[s.Config.ShellType]
 	if !ok {
-		logging.Log.Error().Msg("Unsupported shell")
-		return fmt.Errorf("unsupported operating system")
+		s.logger.Error().Msg("Unsupported shell")
+		return fmt.Errorf("unsupported shell located")
 	}
 
 	shellTmpl, err := template.ParseFS(templateFS, shellTmplLocation)
 	if err != nil {
-		logging.Log.Err(err).Msg("Failed to parse shell template")
+		s.logger.Err(err).Msg("Failed to parse shell template")
 		return err
 	}
 
@@ -93,74 +122,104 @@ func InstallShellConfiguration() error {
 	if err := shellTmpl.Execute(&shellContent, map[string]interface{}{
 		"CommandScriptPath": collectorFilePath,
 	}); err != nil {
-		logging.Log.Err(err).Msg("Failed to execute shell template")
+		s.logger.Err(err).Msg("Failed to execute shell template")
 		return err
 	}
 
-	if err := os.WriteFile(filePath, shellContent.Bytes(), execPermissions); err != nil {
-		logging.Log.Err(err).Msg("Failed to write shell files")
+	if err := util.WriteFileAndChown(filePath, shellContent.Bytes(), execPermissions, s.Config.SudoExecUser); err != nil {
+		s.logger.Err(err).Msg("Failed to write shell files")
 		return err
 	}
 
-	logging.Log.Info().Msg("Shell configured successfully")
+	s.logger.Info().Msg("Shell configured successfully")
 
 	return nil
 }
 
 // DeleteShellConfiguration removes the shell configuration
-func DeleteShellConfiguration() error {
+func (s *Shell) DeleteShellConfiguration() error {
 
-	filePath := filepath.Join(config.LdaDir, "lda.sh")
+	filePath := filepath.Join(s.Config.LdaDir, "lda.sh")
 
 	if err := os.Remove(filePath); err != nil {
-		logging.Log.Err(err).Msg("Failed to remove shell configuration")
+		s.logger.Err(err).Msg("Failed to remove shell configuration")
 		return err
 	}
 
-	filePath = filepath.Join(config.LdaDir, "collector.sh")
+	filePath = filepath.Join(s.Config.LdaDir, "collector.sh")
 	if err := os.Remove(filePath); err != nil {
-		logging.Log.Err(err).Msg("Failed to remove shell configuration")
+		s.logger.Err(err).Msg("Failed to remove shell configuration")
 		return err
 	}
 
-	logging.Log.Info().Msg("Shell configuration removed successfully")
+	s.logger.Info().Msg("Shell configuration removed successfully")
 
 	return nil
 }
 
 // InjectShellSource injects the shell source
-func InjectShellSource() error {
-	logging.Log.Info().Msg("Installing shell source")
+func (s *Shell) InjectShellSource() error {
+	s.logger.Info().Msg("Installing shell source")
 
 	var shellConfigFile string
-	switch config.Shell {
+	switch s.Config.ShellType {
 	case config.Zsh:
-		shellConfigFile = filepath.Join(config.HomeDir, ".zshrc")
+		shellConfigFile = filepath.Join(s.Config.HomeDir, ".zshrc")
 	case config.Bash:
-		shellConfigFile = filepath.Join(config.HomeDir, ".bashrc")
+		shellConfigFile = filepath.Join(s.Config.HomeDir, ".bashrc")
 	case config.Fish:
-		shellConfigFile = filepath.Join(config.HomeDir, ".config/fish/config.fish")
+		shellConfigFile = filepath.Join(s.Config.HomeDir, ".config/fish/config.fish")
 	default:
-		logging.Log.Error().Msg("Unsupported shell")
+		s.logger.Error().Msg("Unsupported shell")
 		return fmt.Errorf("unsupported shell")
 	}
 
-	source, ok := sourceScripts[config.Shell]
+	if s.Config.IsRoot {
+		conf, err := promptForShellPath(shellConfigFile)
+		if err != nil {
+			return err
+		}
+		shellConfigFile = conf
+	}
+
+	source, ok := sourceScripts[s.Config.ShellType]
 	if !ok {
-		logging.Log.Error().Msg("Unsupported shell")
+		s.logger.Error().Msg("Unsupported shell")
 		return fmt.Errorf("unsupported shell")
 	}
 
-	logging.Log.Debug().Msgf("Shell config file: %s", shellConfigFile)
+	s.logger.Debug().Msgf("Shell config file: %s", shellConfigFile)
 	// Check if the script is already present to avoid duplicates
-	if !util.IsScriptPresent(shellConfigFile, source) {
+	if !util.IsScriptPresent(shellConfigFile, "LDA shell source") {
 		if err := util.AppendToFile(shellConfigFile, source); err != nil {
-			logging.Log.Error().Msg("Failed to append to the file")
+			s.logger.Error().Msg("Failed to append to the file")
 			return err
 		}
 	}
 
-	logging.Log.Info().Msg("Shell source injected successfully")
+	s.logger.Info().Msg("Shell source injected successfully")
 
 	return nil
+}
+
+// promptForShellPath uses prompt to ask the user to confirm or enter a new shell path.
+func promptForShellPath(detectedShellPath string) (string, error) {
+	prompt := promptui.Prompt{
+		Label:     fmt.Sprintf("We will try to inject this into your shell located at the path: %s. If this is not your shell path, input the path to the shell where we can inject the source; if it is, just press Enter", detectedShellPath),
+		Default:   detectedShellPath,
+		AllowEdit: true,
+		Validate: func(input string) error {
+			// TODO: check if path exists
+			return nil
+		},
+	}
+
+	result, err := prompt.Run()
+
+	if err != nil {
+		return "", err
+	}
+
+	result = strings.TrimSpace(result)
+	return result, nil
 }
