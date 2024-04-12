@@ -58,22 +58,35 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	eStart := time.Now()
+
 	commands, err := collector.GetAllCommandsForPeriod(startMillis, endMillis)
 	if err != nil {
 		showError(w)
 		return
 	}
+	elapsed := time.Since(eStart)
+	logging.Log.Debug().Msgf("Time taken to retrieve commands: %s", elapsed)
+
+	eStart = time.Now()
 	processes, err := process.GetAllProcessesForPeriod(startMillis, endMillis)
 	if err != nil {
 		showError(w)
 		return
 	}
 
+	elapsed = time.Since(eStart)
+	logging.Log.Debug().Msgf("Time taken to retrieve processes: %s", elapsed)
+
+	eStart = time.Now()
 	timeProcesses, err := process.GetTopProcessesAndMetrics(startMillis, endMillis)
 	if err != nil {
 		showError(w)
 		return
 	}
+
+	elapsed = time.Since(eStart)
+	logging.Log.Debug().Msgf("Time taken to retrieve time processes: %s", elapsed)
 
 	commandsJson, err := PrepareCommandCategoriesExecutionTimeChartData(commands)
 	if err != nil {

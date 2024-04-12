@@ -12,6 +12,8 @@ func RunMigrations() {
 	createProcessesTable()
 	createCommandsTable()
 	createConfigTable()
+	addIndexOnProcesses()
+	//addDetailedIndexOnProcesses()
 }
 
 func ensureMigrationTableExists() {
@@ -73,6 +75,39 @@ func createCommandsTable() {
 		_, err := DB.Exec(createCommandsTableSQL)
 		if err != nil {
 			fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create commands table: %s\n", err)
+			os.Exit(1)
+		}
+		recordMigration(migrationName)
+	}
+}
+
+func addIndexOnProcesses() {
+	migrationName := "add_index_on_processes"
+	if !migrationApplied(migrationName) {
+		indexesSQL := []string{
+			`CREATE INDEX IF NOT EXISTS idx_processes_stored_time ON processes(stored_time);`,
+			`CREATE INDEX IF NOT EXISTS idx_processes_name_pid_stored_time ON processes(pid, name, stored_time);`,
+			`CREATE INDEX IF NOT EXISTS idx_processes_cpu_memory_usage ON processes(cpu_usage, memory_usage);`,
+		}
+
+		for _, sql := range indexesSQL {
+			_, err := DB.Exec(sql)
+			if err != nil {
+				fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create index: %s\n", err)
+				os.Exit(1)
+			}
+		}
+		recordMigration(migrationName)
+	}
+}
+
+func addDetailedIndexOnProcesses() {
+	migrationName := "add_detailed_index_on_processes"
+	if !migrationApplied(migrationName) {
+		sql := `CREATE INDEX IF NOT EXISTS idx_processes_detailed ON processes(stored_time, cpu_usage, memory_usage, name, pid);`
+		_, err := DB.Exec(sql)
+		if err != nil {
+			fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create detailed index: %s\n", err)
 			os.Exit(1)
 		}
 		recordMigration(migrationName)
