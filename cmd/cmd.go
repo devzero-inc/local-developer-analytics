@@ -110,6 +110,9 @@ func setupConfig() {
 	// setting up the system configuration
 	config.SetupSysConfig()
 
+	// Setup afero FS layer
+	config.SetupFS()
+
 	sudoExecUser, isRoot, err := config.GetUserConfig()
 	if err != nil {
 		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to get user configuration: %s\n", err)
