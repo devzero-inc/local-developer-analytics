@@ -7,8 +7,7 @@ import (
 	"github.com/spf13/afero"
 	"html/template"
 	"lda/config"
-	"lda/logging"
-	"os"
+	"lda/util"
 	"os/exec"
 	"os/user"
 	"path/filepath"
@@ -95,12 +94,12 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 		return err
 	}
 
-	if err := config.Fs.MkdirAll(filepath.Dir(filePath), DirPermission); err != nil {
+	if err := util.Fs.MkdirAll(filepath.Dir(filePath), DirPermission); err != nil {
 		d.logger.Err(err).Msg("Failed to create directories for daemon files")
 		return fmt.Errorf("failed to create directories for daemon files: %w", err)
 	}
 
-	if err := afero.WriteFile(config.Fs, filePath, content.Bytes(), ServicePermission); err != nil {
+	if err := afero.WriteFile(util.Fs, filePath, content.Bytes(), ServicePermission); err != nil {
 		d.logger.Err(err).Msg("Failed to write daemon files")
 		return fmt.Errorf("failed to write daemon files: %w", err)
 	}
@@ -119,7 +118,7 @@ func (d *Daemon) DestroyDaemonConfiguration() error {
 		return err
 	}
 
-	if err := config.Fs.Remove(filePath); err != nil {
+	if err := util.Fs.Remove(filePath); err != nil {
 		d.logger.Err(err).Msg("Failed to remove daemon service file")
 		return err
 	}

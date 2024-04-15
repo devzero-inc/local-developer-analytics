@@ -1,4 +1,4 @@
-package config
+package util
 
 import "github.com/spf13/afero"
 
