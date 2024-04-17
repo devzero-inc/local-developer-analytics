@@ -13,6 +13,12 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
+// TODO: set up localization engine for these strings.
+const (
+	YesUpdate string = "Yes, update to new configuration"
+	NoKeep    string = "No, keep the existing configuration"
+)
+
 var Conf *Config
 
 // Config is the basic configuration for the system
@@ -103,7 +109,7 @@ func ConfigureUserSystemInfo(currentConf *Config) {
 			// Prompt user to choose between old and new config
 			prompt := promptui.Select{
 				Label: "Configuration drift detected. Do you want to update the configuration to the new settings?",
-				Items: []string{"Yes, update to new configuration", "No, keep the existing configuration"},
+				Items: []string{YesUpdate, NoKeep},
 			}
 
 			_, result, err := prompt.Run()
@@ -114,7 +120,7 @@ func ConfigureUserSystemInfo(currentConf *Config) {
 				os.Exit(1)
 			}
 
-			if result == "Yes, update to new configuration" {
+			if result == YesUpdate {
 
 				shellType, shellLocation, err := config.GetShell()
 				if err != nil {
