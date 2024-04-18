@@ -34,8 +34,8 @@ func GetCommandById(id int64) (*Command, error) {
 }
 
 // GetAllCommandsForPeriod fetches all commands for a given period
-func GetAllCommandsForPeriod(start int64, end int64) ([]Command, error) {
-	var commands []Command
+func GetAllCommandsForPeriod(start int64, end int64) ([]*Command, error) {
+	var commands []*Command
 
 	query := `SELECT id, category, SUM(execution_time) AS execution_time 
               FROM commands 

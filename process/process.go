@@ -60,15 +60,19 @@ type Process struct {
 }
 
 // GetAllProcessesForPeriod fetches all processes for a given period
-func GetAllProcessesForPeriod(start int64, end int64) ([]Process, error) {
-	var processes []Process
+func GetAllProcessesForPeriod(start int64, end int64) ([]*Process, error) {
+	var processes []*Process
 
-	query := `SELECT pid, name, AVG(cpu_usage) AS cpu_usage, AVG(memory_usage) AS memory_usage 
-              FROM processes
-              WHERE stored_time >= ? AND stored_time <= ?
-              GROUP BY pid, name
-              ORDER BY cpu_usage DESC, memory_usage DESC
-              LIMIT 100`
+	query := `SELECT pid, name, MAX(cpu_usage) as cpu_usage, MAX(memory_usage) as memory_usage
+FROM (
+    SELECT pid, name, cpu_usage, memory_usage
+    FROM processes
+    WHERE stored_time BETWEEN ? AND ? 
+    ORDER BY cpu_usage DESC, memory_usage DESC
+    LIMIT 100
+) AS filtered_processes
+GROUP BY pid, name
+ORDER BY cpu_usage DESC, memory_usage DESC;`
 
 	err := database.DB.Select(&processes, query, start, end)
 	if err != nil {
@@ -80,29 +84,33 @@ func GetAllProcessesForPeriod(start int64, end int64) ([]Process, error) {
 
 // GetTopProcessesAndMetrics fetches the top processes based on a criterion like average CPU usage,
 // and then fetches detailed time-series data for each top process.
-func GetTopProcessesAndMetrics(start int64, end int64) (map[int64][]Process, error) {
-	query := `
-SELECT p.name, p.pid, p.cpu_usage, p.memory_usage, p.stored_time
+func GetTopProcessesAndMetrics(start int64, end int64) (map[int64][]*Process, error) {
+	query := `SELECT p.name, p.pid, p.cpu_usage, p.memory_usage, p.stored_time
 FROM (
-    SELECT name, pid, AVG(cpu_usage) AS cpu_usage, AVG(memory_usage) AS memory_usage
-    FROM processes
-    WHERE stored_time BETWEEN ? AND ?
+    SELECT pid, name, MAX(cpu_usage) as cpu_usage, MAX(memory_usage) as memory_usage
+        FROM (
+            SELECT pid, name, cpu_usage, memory_usage
+            FROM processes
+            WHERE stored_time BETWEEN ? AND ? 
+            ORDER BY cpu_usage DESC, memory_usage DESC
+            LIMIT 100
+        ) AS filtered_processes
     GROUP BY pid, name
     ORDER BY cpu_usage DESC, memory_usage DESC
     LIMIT 20
 ) AS top_processes
 JOIN processes p ON top_processes.name = p.name AND top_processes.pid = p.pid
-WHERE p.stored_time BETWEEN ? AND ?
+WHERE p.stored_time BETWEEN ? AND ? 
 ORDER BY p.stored_time DESC;`
 
-	var allMetrics []Process
+	var allMetrics []*Process
 	err := database.DB.Select(&allMetrics, query, start, end, start, end)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching process metrics: %v", err)
 	}
 
 	// Organize the results into a map of PID to list of Process structs
-	processMetricsMap := make(map[int64][]Process)
+	processMetricsMap := make(map[int64][]*Process)
 	for _, metric := range allMetrics {
 		processMetricsMap[metric.PID] = append(processMetricsMap[metric.PID], metric)
 	}

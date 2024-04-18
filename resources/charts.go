@@ -95,7 +95,7 @@ type ChartTooltipOptions struct {
 }
 
 // PrepareCPUTimeSeriesChartData prepares the data for the CPU Time Series chart.
-func PrepareCPUTimeSeriesChartData(processData map[int64][]process.Process) (string, error) {
+func PrepareCPUTimeSeriesChartData(processData map[int64][]*process.Process) (string, error) {
 
 	if (processData == nil) || (len(processData) == 0) {
 		return "", nil
@@ -162,7 +162,7 @@ func PrepareCPUTimeSeriesChartData(processData map[int64][]process.Process) (str
 }
 
 // PrepareMemoryTimeSeriesChartData prepares and returns the chart data for memory usage as a JSON string.
-func PrepareMemoryTimeSeriesChartData(processData map[int64][]process.Process) (string, error) {
+func PrepareMemoryTimeSeriesChartData(processData map[int64][]*process.Process) (string, error) {
 
 	if (processData == nil) || (len(processData) == 0) {
 		return "", nil
@@ -281,7 +281,7 @@ func PrepareCommandsExecutionTimeChartData(commands []collector.Command) (string
 }
 
 // PrepareCommandCategoriesExecutionTimeChartData prepares and returns the chart data for the command's execution time distribution.
-func PrepareCommandCategoriesExecutionTimeChartData(commands []collector.Command) (string, error) {
+func PrepareCommandCategoriesExecutionTimeChartData(commands []*collector.Command) (string, error) {
 
 	if commands != nil && len(commands) == 0 {
 		return "", nil
@@ -331,7 +331,7 @@ func PrepareCommandCategoriesExecutionTimeChartData(commands []collector.Command
 }
 
 // PrepareProcessesResourceUsageChartData prepares and returns the chart data for processes' resource usage.
-func PrepareProcessesResourceUsageChartData(processes []process.Process) (string, error) {
+func PrepareProcessesResourceUsageChartData(processes []*process.Process) (string, error) {
 
 	if processes != nil && len(processes) == 0 {
 		return "", nil

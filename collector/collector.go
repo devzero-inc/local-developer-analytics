@@ -315,6 +315,7 @@ func (c *Collector) handleEndCommand(parts []string) error {
 			c.logger.Error().Err(err).Msg("Failed to insert command")
 			return err
 		}
+
 		delete(c.collectionConfig.ongoingCommands, parts[4])
 		c.onEndCommand()
 
