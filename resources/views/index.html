@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
 </head>
 <body class="p-5 bg-gray-50">
+<!-- Loading Indicator Overlay -->
+<div id="loading" class="fixed inset-0 bg-gray-300 opacity-75 z-50 flex justify-center items-center">
+    <div class="spinner-border h-12 w-12 border-4 rounded-full animate-spin" style="border-color: #3490dc transparent #3490dc transparent;"></div>
+</div>
+
 <div class="flex justify-end">
     <form action="/" method="get" class="mb-4">
         <div class="flex flex-wrap -mx-3 mb-6">
@@ -47,7 +52,13 @@
 </div>
 </body>
 <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Hide the loading spinner once the DOM is fully loaded
+        document.getElementById('loading').style.display = 'none';
+    });
+
     (async function () {
+
         // Use the injected JSON data
         const commandChart = `{{.CommandsJSON}}`;
         const processesChart = `{{.ProcessesJSON}}`;
@@ -58,7 +69,7 @@
             try {
                 const parsed = JSON.parse(data);
                 return parsed.data.datasets.length === 0 || parsed.data.datasets.some(ds => ds.data.length === 0);
-            } catch(e) {
+            } catch (e) {
                 return true;
             }
         }
@@ -68,7 +79,7 @@
                 document.getElementById(containerId).parentElement.innerHTML = `<p class="text-center text-gray-500">${message}</p>`;
             } else {
                 const parsedData = JSON.parse(chartData);
-                if(containerId === 'processesResourceUsage') {
+                if (containerId === 'processesResourceUsage') {
                     parsedData.options.plugins.tooltip = {
                         callbacks: {
                             beforeTitle: function (context) {
@@ -81,7 +92,7 @@
                         return context.raw.r;
                     };
 
-                } else if(containerId === 'commandsExecutionTime') {
+                } else if (containerId === 'commandsExecutionTime') {
                     parsedData.options.onClick = function (event, elements) {
                         // 'elements' is an array of elements that are at the click position.
                         if (elements.length > 0) {

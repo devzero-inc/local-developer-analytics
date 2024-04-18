@@ -10,6 +10,11 @@
     <script src="https://cdn.datatables.net/2.0.3/js/dataTables.js"></script>
 </head>
 <body class="p-5 bg-gray-50">
+<!-- Loading Indicator Overlay -->
+<div id="loading" class="fixed inset-0 bg-gray-300 opacity-75 z-50 flex justify-center items-center">
+    <div class="spinner-border h-12 w-12 border-4 rounded-full animate-spin" style="border-color: #3490dc transparent #3490dc transparent;"></div>
+</div>
+
 <div class="flex justify-end">
     <form action="/" method="get" class="mb-4">
         <div class="flex flex-wrap -mx-3 mb-6">
@@ -61,6 +66,11 @@
 </div>
 </body>
 <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Hide the loading spinner once the DOM is fully loaded
+        document.getElementById('loading').style.display = 'none';
+    });
+
     (async function () {
         new DataTable('#commandsTable');
 
