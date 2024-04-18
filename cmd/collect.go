@@ -51,10 +51,11 @@ func collect(_ *cobra.Command, _ []string) error {
 	}
 
 	intervalConfig := collector.IntervalConfig{
-		ProcessInterval:           time.Duration(config.AppConfig.ProcessInterval),
-		CommandInterval:           time.Duration(config.AppConfig.CommandInterval),
-		CommandIntervalMultiplier: time.Duration(config.AppConfig.CommandIntervalMultiplier),
+		ProcessInterval:           time.Duration(config.AppConfig.ProcessInterval) * time.Second,
+		CommandInterval:           time.Duration(config.AppConfig.CommandInterval) * time.Second,
+		CommandIntervalMultiplier: config.AppConfig.CommandIntervalMultiplier,
 		MaxConcurrentCommands:     config.AppConfig.MaxConcurrentCommands,
+		MaxDuration:               time.Duration(config.AppConfig.MaxDuration) * time.Second,
 	}
 
 	procCol, err := process.NewFactory(logging.Log).Create(config.AppConfig.ProcessCollectionType)
