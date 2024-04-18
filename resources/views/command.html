@@ -95,6 +95,9 @@
                     const firstElement = elements[0];
                     const index = firstElement.index;
                     const commandInfo = commandsChart.data.ids[index];
+
+                    document.getElementById('loading').style.display = '';
+
                     window.location.href = `/overview?id=${commandInfo}`;
                 }
             };

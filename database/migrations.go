@@ -85,9 +85,8 @@ func addIndexOnProcesses() {
 	migrationName := "add_index_on_processes"
 	if !migrationApplied(migrationName) {
 		indexesSQL := []string{
-			`CREATE INDEX IF NOT EXISTS idx_processes_stored_time ON processes(stored_time);`,
-			`CREATE INDEX IF NOT EXISTS idx_processes_name_pid_stored_time ON processes(pid, name);`,
-			`CREATE INDEX IF NOT EXISTS idx_processes_cpu_memory_usage ON processes(cpu_usage, memory_usage);`,
+			`CREATE INDEX IF NOT EXISTS idx_processes_time_cpu_memory ON processes(stored_time, cpu_usage, memory_usage);`,
+			`CREATE INDEX IF NOT EXISTS idx_processes_pid_name ON processes(pid, name);`,
 		}
 
 		for _, sql := range indexesSQL {

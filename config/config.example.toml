@@ -22,7 +22,7 @@ debug = false
 #   2 - Quadratic growth: Moderate increase, suitable for regular updates.
 #   3 - Cubic growth: Rapid increase, useful when decreasing the frequency of updates more quickly.
 #   4 - Quartic growth: Very rapid increase, best for scenarios where updates become less critical swiftly.
-# degree = 3
+# command_interval_multiplier = 3
 
 # Maximum duration for the command interval. This value caps the collection interval to prevent
 # excessively long wait times between command executions, ensuring that monitoring remains
