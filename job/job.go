@@ -11,7 +11,6 @@ import (
 func Cleanup(hours int, days int) {
 	// ticker to run cleanup every n hours
 	ticker := time.NewTicker(time.Duration(hours) * time.Hour)
-	quit := make(chan struct{})
 
 	go func() {
 		for {
@@ -19,12 +18,7 @@ func Cleanup(hours int, days int) {
 			case <-ticker.C:
 				collector.DeleteCommandsByDays(days)
 				process.DeleteProcessesByDays(days)
-			case <-quit:
-				ticker.Stop()
-				return
 			}
 		}
 	}()
-
-	close(quit)
 }
