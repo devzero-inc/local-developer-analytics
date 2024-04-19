@@ -6,6 +6,7 @@ import (
 	gen "lda/gen/api/v1"
 	"lda/logging"
 	"regexp"
+	"time"
 )
 
 // Command is the model for command
@@ -67,6 +68,21 @@ func GetAllCommandsForCategoryForPeriod(category string, start int64, end int64)
 	}
 
 	return commands, nil
+}
+
+// DeleteCommandsByDays deletes records older than n days
+func DeleteCommandsByDays(days int) error {
+	// Calculate the time when old records will be deleted
+	timeToDelete := time.Now().AddDate(0, 0, -days).Unix()
+
+	result, err := database.DB.Exec("DELETE FROM commands WHERE stored_time < ?", timeToDelete)
+	if err != nil {
+		return err
+	}
+
+	_, err = result.RowsAffected()
+
+	return err
 }
 
 // InsertCommand inserts a command into the database

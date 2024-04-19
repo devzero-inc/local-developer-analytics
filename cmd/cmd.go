@@ -6,6 +6,7 @@ import (
 	"lda/config"
 	"lda/daemon"
 	"lda/database"
+	"lda/job"
 	"lda/logging"
 	"lda/resources"
 	"lda/shell"
@@ -78,6 +79,13 @@ var (
 		Long:  `Serve local frontend client for LDA Project.`,
 		RunE:  serve,
 	}
+)
+
+const (
+	// days are amount of days that old data will be retained
+	days = 5
+	// hours are amount of hours that ticker in job will use to run cleanup job
+	hours = 24
 )
 
 func init() {
@@ -165,6 +173,9 @@ func setupConfig() {
 		ExePath: exePath,
 		User:    sudoExecUser,
 	}
+
+	// run cleanup job
+	job.Cleanup(hours, days)
 }
 
 // Execute is the entry point for the command line

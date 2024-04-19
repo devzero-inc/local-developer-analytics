@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"lda/database"
 	gen "lda/gen/api/v1"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -116,6 +117,21 @@ ORDER BY p.stored_time DESC;`
 	}
 
 	return processMetricsMap, nil
+}
+
+// DeleteProcessesByDays deletes records older than n days
+func DeleteProcessesByDays(days int) error {
+	// Calculate the time when old records will be deleted
+	timeToDelete := time.Now().AddDate(0, 0, -days).Unix()
+
+	result, err := database.DB.Exec("DELETE FROM processes WHERE stored_time < ?", timeToDelete)
+	if err != nil {
+		return err
+	}
+
+	_, err = result.RowsAffected()
+
+	return err
 }
 
 // InsertProcesses inserts multiple processes into the database in bulk
