@@ -13,7 +13,6 @@ func RunMigrations() {
 	createCommandsTable()
 	createConfigTable()
 	addIndexOnProcesses()
-	//addDetailedIndexOnProcesses()
 }
 
 func ensureMigrationTableExists() {
@@ -95,19 +94,6 @@ func addIndexOnProcesses() {
 				fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create index: %s\n", err)
 				os.Exit(1)
 			}
-		}
-		recordMigration(migrationName)
-	}
-}
-
-func addDetailedIndexOnProcesses() {
-	migrationName := "add_detailed_index_on_processes"
-	if !migrationApplied(migrationName) {
-		sql := `CREATE INDEX IF NOT EXISTS idx_processes_detailed ON processes(stored_time, cpu_usage, memory_usage, name, pid);`
-		_, err := DB.Exec(sql)
-		if err != nil {
-			fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create detailed index: %s\n", err)
-			os.Exit(1)
 		}
 		recordMigration(migrationName)
 	}
