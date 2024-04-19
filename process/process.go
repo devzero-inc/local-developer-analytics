@@ -2,8 +2,10 @@ package process
 
 import (
 	"errors"
+	"fmt"
 	"lda/database"
 	gen "lda/gen/api/v1"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -59,15 +61,19 @@ type Process struct {
 }
 
 // GetAllProcessesForPeriod fetches all processes for a given period
-func GetAllProcessesForPeriod(start int64, end int64) ([]Process, error) {
-	var processes []Process
+func GetAllProcessesForPeriod(start int64, end int64) ([]*Process, error) {
+	var processes []*Process
 
-	query := `SELECT pid, name, AVG(cpu_usage) AS cpu_usage, AVG(memory_usage) AS memory_usage 
-              FROM processes
-              WHERE stored_time >= ? AND stored_time <= ?
-              GROUP BY pid, name
-              ORDER BY AVG(cpu_usage) DESC, AVG(memory_usage) DESC
-              LIMIT 500`
+	query := `SELECT pid, name, MAX(cpu_usage) as cpu_usage, MAX(memory_usage) as memory_usage
+FROM (
+    SELECT pid, name, cpu_usage, memory_usage
+    FROM processes
+    WHERE stored_time BETWEEN ? AND ? 
+    ORDER BY cpu_usage DESC, memory_usage DESC
+    LIMIT 100
+) AS filtered_processes
+GROUP BY pid, name
+ORDER BY cpu_usage DESC, memory_usage DESC;`
 
 	err := database.DB.Select(&processes, query, start, end)
 	if err != nil {
@@ -79,42 +85,53 @@ func GetAllProcessesForPeriod(start int64, end int64) ([]Process, error) {
 
 // GetTopProcessesAndMetrics fetches the top processes based on a criterion like average CPU usage,
 // and then fetches detailed time-series data for each top process.
-func GetTopProcessesAndMetrics(start int64, end int64) (map[int64][]Process, error) {
-	var topProcesses []Process
-	processMetricsMap := make(map[int64][]Process)
+func GetTopProcessesAndMetrics(start int64, end int64) (map[int64][]*Process, error) {
+	query := `SELECT p.name, p.pid, p.cpu_usage, p.memory_usage, p.stored_time
+FROM (
+    SELECT pid, name, MAX(cpu_usage) as cpu_usage, MAX(memory_usage) as memory_usage
+        FROM (
+            SELECT pid, name, cpu_usage, memory_usage
+            FROM processes
+            WHERE stored_time BETWEEN ? AND ? 
+            ORDER BY cpu_usage DESC, memory_usage DESC
+            LIMIT 100
+        ) AS filtered_processes
+    GROUP BY pid, name
+    ORDER BY cpu_usage DESC, memory_usage DESC
+    LIMIT 20
+) AS top_processes
+JOIN processes p ON top_processes.name = p.name AND top_processes.pid = p.pid
+WHERE p.stored_time BETWEEN ? AND ? 
+ORDER BY p.stored_time DESC;`
 
-	// Step 1: Identify the top processes
-	topProcessesQuery := `SELECT name, pid, AVG(cpu_usage) AS cpu_usage, AVG(memory_usage) AS memory_usage
-		FROM processes 
-		WHERE stored_time BETWEEN ? AND ?
-		GROUP BY name, pid
-		ORDER BY cpu_usage DESC, memory_usage DESC
-		LIMIT 20;`
-
-	err := database.DB.Select(&topProcesses, topProcessesQuery, start, end)
+	var allMetrics []*Process
+	err := database.DB.Select(&allMetrics, query, start, end, start, end)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error fetching process metrics: %v", err)
 	}
 
-	// Step 2: Fetch time-series data for each top process
-	for _, process := range topProcesses {
-		var metrics []Process
-
-		metricsQuery := `SELECT name, pid, cpu_usage,  memory_usage, stored_time
-			FROM processes
-			WHERE name = ? AND pid = ? AND stored_time BETWEEN ? AND ?
-			ORDER BY stored_time DESC
-			LIMIT 20;`
-
-		err := database.DB.Select(&metrics, metricsQuery, process.Name, process.PID, start, end)
-		if err != nil {
-			continue
-		}
-
-		processMetricsMap[process.PID] = metrics
+	// Organize the results into a map of PID to list of Process structs
+	processMetricsMap := make(map[int64][]*Process)
+	for _, metric := range allMetrics {
+		processMetricsMap[metric.PID] = append(processMetricsMap[metric.PID], metric)
 	}
 
 	return processMetricsMap, nil
+}
+
+// DeleteProcessesByDays deletes records older than n days
+func DeleteProcessesByDays(days int) error {
+	// Calculate the time when old records will be deleted
+	timeToDelete := time.Now().AddDate(0, 0, -days).Unix()
+
+	result, err := database.DB.Exec("DELETE FROM processes WHERE stored_time < ?", timeToDelete)
+	if err != nil {
+		return err
+	}
+
+	_, err = result.RowsAffected()
+
+	return err
 }
 
 // InsertProcesses inserts multiple processes into the database in bulk

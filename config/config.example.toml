@@ -13,6 +13,24 @@ debug = false
 # Default: 1 second
 # command_interval = 1
 
+# Degree of the polynomial used for calculating the backoff interval. This value determines how
+# rapidly the interval increases after each command execution. Higher degrees result in faster
+# increases. This setting allows for adaptable monitoring frequencies based on the application's
+# performance and needs.
+# Default: 3 (Cubic growth)
+# Possible values:
+#   2 - Quadratic growth: Moderate increase, suitable for regular updates.
+#   3 - Cubic growth: Rapid increase, useful when decreasing the frequency of updates more quickly.
+#   4 - Quartic growth: Very rapid increase, best for scenarios where updates become less critical swiftly.
+# command_interval_multiplier = 3
+
+# Maximum duration for the command interval. This value caps the collection interval to prevent
+# excessively long wait times between command executions, ensuring that monitoring remains
+# responsive even as intervals extend. Ideal for maintaining a balance between performance
+# and system load.
+# Default: 3600 seconds (1 hour)
+# max_duration = 3600
+
 # Multiplier for the command interval. This value extends the collection interval after a command execution,
 # allowing for extended monitoring of processes post-execution.
 # Default: 5

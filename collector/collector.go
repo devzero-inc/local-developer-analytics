@@ -34,8 +34,9 @@ type Collector struct {
 type IntervalConfig struct {
 	ProcessInterval           time.Duration
 	CommandInterval           time.Duration
-	CommandIntervalMultiplier time.Duration
+	CommandIntervalMultiplier float64
 	MaxConcurrentCommands     int
+	MaxDuration               time.Duration
 }
 
 // collectionConfig contains the configuration for the collection process
@@ -83,7 +84,7 @@ func (c *Collector) Collect() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		c.collectSystemInformation(ctx, c.intervalConfig.ProcessInterval*time.Second, 0)
+		c.collectSystemInformation(ctx, c.intervalConfig.ProcessInterval, 3, c.intervalConfig.MaxDuration)
 	}()
 
 	wg.Add(1)
@@ -100,7 +101,8 @@ func (c *Collector) Collect() {
 	c.logger.Info().Msg("Collection stopped")
 }
 
-func (c *Collector) collectSystemInformation(ctx context.Context, initialDuration time.Duration, increaseDuration time.Duration) {
+// collectSystemInformation uses exponential backoff for intervals between collections.
+func (c *Collector) collectSystemInformation(ctx context.Context, initialDuration time.Duration, increaseFactor float64, maxDuration time.Duration) {
 	// Perform initial collection
 	if err := c.collectOnce(); err != nil {
 		c.logger.Error().Err(err).Msg("Failed to collect system information")
@@ -118,8 +120,13 @@ func (c *Collector) collectSystemInformation(ctx context.Context, initialDuratio
 			if err := c.collectOnce(); err != nil {
 				c.logger.Error().Err(err).Msg("Failed to collect system information")
 			}
-			// Increase the duration for the next tick
-			currentDuration += increaseDuration
+
+			// Calculate the next interval with exponential backoff
+			currentDuration = time.Duration(float64(currentDuration) * increaseFactor)
+			if currentDuration > maxDuration {
+				currentDuration = maxDuration
+			}
+
 			c.logger.Debug().Msgf("Next collection in %s", currentDuration)
 		}
 	}
@@ -165,13 +172,13 @@ func (c *Collector) onStartCommand() {
 	// If the collection is not running, start it with a timeout
 	if !c.collectionConfig.isCollectionRunning {
 		c.logger.Debug().Msg("Starting collection")
-		var timeoutDuration = 10 * time.Minute
 		c.collectionConfig.collectionContext, c.collectionConfig.collectionCancelFunc =
-			context.WithTimeout(context.Background(), timeoutDuration)
+			context.WithTimeout(context.Background(), c.intervalConfig.MaxDuration)
 		go c.collectSystemInformation(
 			c.collectionConfig.collectionContext,
-			c.intervalConfig.CommandInterval*time.Second,
-			c.intervalConfig.CommandIntervalMultiplier*time.Second,
+			c.intervalConfig.CommandInterval,
+			c.intervalConfig.CommandIntervalMultiplier,
+			c.intervalConfig.MaxDuration,
 		)
 		c.collectionConfig.isCollectionRunning = true
 	}
@@ -315,6 +322,7 @@ func (c *Collector) handleEndCommand(parts []string) error {
 			c.logger.Error().Err(err).Msg("Failed to insert command")
 			return err
 		}
+
 		delete(c.collectionConfig.ongoingCommands, parts[4])
 		c.onEndCommand()
 

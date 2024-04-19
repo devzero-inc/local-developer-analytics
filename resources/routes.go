@@ -8,6 +8,7 @@ import (
 	"lda/process"
 	"net/http"
 	"strconv"
+	"sync"
 	"text/template"
 	"time"
 )
@@ -58,22 +59,84 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	commands, err := collector.GetAllCommandsForPeriod(startMillis, endMillis)
-	if err != nil {
-		showError(w)
-		return
-	}
-	processes, err := process.GetAllProcessesForPeriod(startMillis, endMillis)
-	if err != nil {
+	logging.Log.Debug().Msg("Creating waiting groups")
+
+	// Initialize wait group and channels for concurrent operations
+	var wg sync.WaitGroup
+	commandsChan := make(chan []*collector.Command, 1)
+	processesChan := make(chan []*process.Process, 1)
+	timeProcessesChan := make(chan map[int64][]*process.Process, 1)
+
+	logging.Log.Debug().Msg("Fetching data concurrently")
+
+	// Increment wait group count for each concurrent operation
+	wg.Add(3)
+
+	// Fetch commands concurrently
+	go func() {
+		logging.Log.Debug().Msg("Fetching commands")
+		defer wg.Done()
+		commands, err := collector.GetAllCommandsForPeriod(startMillis, endMillis)
+		logging.Log.Debug().Msg("Sending commands")
+		if err != nil {
+			logging.Log.Err(err).Msg("Failed to fetch commands")
+			commandsChan <- nil
+			return
+		}
+		commandsChan <- commands
+		logging.Log.Debug().Msg("Fetched commands")
+	}()
+
+	// Fetch processes concurrently
+	go func() {
+		logging.Log.Debug().Msg("Fetching processes")
+		defer wg.Done()
+		processes, err := process.GetAllProcessesForPeriod(startMillis, endMillis)
+		logging.Log.Debug().Msg("Sending processes")
+		if err != nil {
+			logging.Log.Err(err).Msg("Failed to fetch processes")
+			processesChan <- nil
+			return
+		}
+		processesChan <- processes
+		logging.Log.Debug().Msg("Fetched processes")
+	}()
+
+	// Fetch time processes concurrently
+	go func() {
+		logging.Log.Debug().Msg("Fetching time processes")
+		defer wg.Done()
+		timeProcesses, err := process.GetTopProcessesAndMetrics(startMillis, endMillis)
+		logging.Log.Debug().Msg("Sending time processes")
+		if err != nil {
+			logging.Log.Err(err).Msg("Failed to fetch time processes")
+			timeProcessesChan <- nil
+			return
+		}
+		timeProcessesChan <- timeProcesses
+		logging.Log.Debug().Msg("Fetched time processes")
+	}()
+
+	logging.Log.Debug().Msg("Waiting...")
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+	close(commandsChan)
+	close(processesChan)
+	close(timeProcessesChan)
+
+	// Receive from channels
+	commands := <-commandsChan
+	processes := <-processesChan
+	timeProcesses := <-timeProcessesChan
+
+	// Check for errors after receiving data
+	if commands == nil || processes == nil || timeProcesses == nil {
 		showError(w)
 		return
 	}
 
-	timeProcesses, err := process.GetTopProcessesAndMetrics(startMillis, endMillis)
-	if err != nil {
-		showError(w)
-		return
-	}
+	logging.Log.Debug().Msg("Preparing data for rendering")
 
 	commandsJson, err := PrepareCommandCategoriesExecutionTimeChartData(commands)
 	if err != nil {
@@ -223,42 +286,96 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	processes, err := process.GetAllProcessesForPeriod(command.StartTime, command.EndTime)
-	if err != nil {
+	// Initialize wait group and channels for concurrent operations
+	var wg sync.WaitGroup
+	processesChan := make(chan []*process.Process, 1)
+	timeProcessesChan := make(chan map[int64][]*process.Process, 1)
+
+	logging.Log.Debug().Msgf("Start time: %d, End time: %d", command.StartTime, command.EndTime)
+
+	// Increment wait group count for each concurrent operation
+	wg.Add(2)
+
+	// Fetch processes concurrently
+	go func() {
+		logging.Log.Debug().Msg("Fetching overview processes")
+		defer wg.Done()
+		processes, err := process.GetAllProcessesForPeriod(command.StartTime, command.EndTime)
+		logging.Log.Debug().Msg("Sending processes")
+		if err != nil {
+			logging.Log.Err(err).Msg("Failed to fetch processes")
+			processesChan <- nil
+			return
+		}
+		processesChan <- processes
+		logging.Log.Debug().Msg("Fetched processes")
+	}()
+
+	// Fetch time processes concurrently
+	go func() {
+		logging.Log.Debug().Msg("Fetching overview time processes")
+		defer wg.Done()
+		timeProcesses, err := process.GetTopProcessesAndMetrics(command.StartTime, command.EndTime)
+		logging.Log.Debug().Msg("Sending time processes")
+		if err != nil {
+			logging.Log.Err(err).Msg("Failed to fetch time processes")
+			timeProcessesChan <- nil
+			return
+		}
+		timeProcessesChan <- timeProcesses
+		logging.Log.Debug().Msg("Fetched time processes")
+	}()
+
+	logging.Log.Debug().Msg("Waiting...")
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+	close(processesChan)
+	close(timeProcessesChan)
+
+	// Receive from channels
+	processes := <-processesChan
+	timeProcesses := <-timeProcessesChan
+
+	logging.Log.Debug().Msg("Checking for errors...")
+
+	// Check for errors after receiving data
+	if processes == nil || timeProcesses == nil {
+		logging.Log.Error().Err(err).Msgf("Failed to fetch processes with length: %d, and time processes with length %d", len(processes), len(timeProcesses))
 		showError(w)
 		return
 	}
 
+	// encode processes in processJson
 	processesJson, err := json.Marshal(processes)
 	if err != nil {
-		showError(w)
-		return
-	}
-
-	timeProcesses, err := process.GetTopProcessesAndMetrics(command.StartTime, command.EndTime)
-	if err != nil {
+		logging.Log.Err(err).Msg("Failed to marshal processes")
 		showError(w)
 		return
 	}
 
 	processResourceJson, err := PrepareProcessesResourceUsageChartData(processes)
 	if err != nil {
+		logging.Log.Err(err).Msg("Failed to prepare process resource usage")
 		showError(w)
 		return
 	}
 	cpuResourceJson, err := PrepareCPUTimeSeriesChartData(timeProcesses)
 	if err != nil {
+		logging.Log.Err(err).Msg("Failed to prepare CPU time series")
 		showError(w)
 		return
 	}
 	memoryResourceJson, err := PrepareMemoryTimeSeriesChartData(timeProcesses)
 	if err != nil {
+		logging.Log.Err(err).Msg("Failed to prepare memory time series")
 		showError(w)
 		return
 	}
 
 	tmpl, err := template.ParseFS(templateFS, "views/overview.html")
 	if err != nil {
+		logging.Log.Err(err).Msg("Failed to render template")
 		showError(w)
 		return
 	}
@@ -270,6 +387,7 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		"Processes":            processes,
 		"ProcessJSON":          string(processesJson),
 	}); err != nil {
+		logging.Log.Err(err).Msg("Failed to render template")
 		showError(w)
 	}
 }

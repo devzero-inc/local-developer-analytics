@@ -22,8 +22,10 @@ type Config struct {
 	ProcessInterval int `mapstructure:"process_interval"`
 	// CommandInterval interval in which to collect process information when command has been executed - defaults to 1 second
 	CommandInterval int `mapstructure:"command_interval"`
-	// CommandIntervalMultiplier multiplier for the command interval - defaults to 5 seconds
-	CommandIntervalMultiplier int `mapstructure:"command_interval_multiplier"`
+	// CommandIntervalMultiplier multiplier for the command interval - defaults to 3 (cubic)
+	CommandIntervalMultiplier float64 `mapstructure:"command_interval_multiplier"`
+	// MaxDuration max duration that collection can run for
+	MaxDuration int `mapstructure:"max_duration"`
 	// MaxConcurrentCommands maximum number of concurrent commands to collect - defaults to 20
 	MaxConcurrentCommands int `mapstructure:"max_concurrent_commands"`
 	// RemoteCollection flag to enable remote collection - defaults to false
@@ -87,9 +89,10 @@ func SetupConfig(ldaDir string, user *user.User) {
 		RemoteCollection:          false,
 		ProcessInterval:           3600,
 		CommandInterval:           1,
-		CommandIntervalMultiplier: 5,
+		CommandIntervalMultiplier: 3,
 		MaxConcurrentCommands:     20,
 		ProcessCollectionType:     "ps",
+		MaxDuration:               3600,
 	}
 
 	if err := viper.ReadInConfig(); err != nil {

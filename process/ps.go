@@ -74,8 +74,6 @@ func (p *Ps) Collect() ([]Process, error) {
 			OS:          runtime.GOOS,
 			Platform:    runtime.GOOS,
 		})
-
-		p.logger.Debug().Msgf("PID: %d, CPU: %f, MEM: %f, Start: %s, Name: %s", pid, cpuUsage, memUsage, startTime, name)
 	}
 
 	if err := scanner.Err(); err != nil {
