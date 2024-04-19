@@ -84,7 +84,7 @@ func (c *Collector) Collect() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		c.collectSystemInformation(ctx, c.intervalConfig.ProcessInterval, 0, c.intervalConfig.MaxDuration)
+		c.collectSystemInformation(ctx, c.intervalConfig.ProcessInterval, 3, c.intervalConfig.MaxDuration)
 	}()
 
 	wg.Add(1)
