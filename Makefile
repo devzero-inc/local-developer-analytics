@@ -83,7 +83,7 @@ buf:
 		echo "The required version of $(BUF_BINARY_NAME) is already installed: $(BUF_VERSION)"; \
 	else \
 		echo "Installing or updating $(BUF_BINARY_NAME)..."; \
-		curl -sSL "https://github.com/bufbuild/buf/releases/download/v${VERSION}/${BUF_BINARY_NAME}-$(shell uname -s)-$(shell uname -m)" -o "${BIN}/${BUF_BINARY_NAME}"; \
+		curl -sSL "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/${BUF_BINARY_NAME}-$(shell uname -s)-$(shell uname -m)" -o "${BIN}/${BUF_BINARY_NAME}"; \
 		chmod +x $(BIN)/$(BUF_BINARY_NAME); \
 	fi
 
