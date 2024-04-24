@@ -8,44 +8,93 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.3/css/dataTables.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
     <script src="https://cdn.datatables.net/2.0.3/js/dataTables.js"></script>
+    <style>
+        .canvas {
+            min-height: 400px;
+            border-radius: 16px;
+            border: 2px solid #3730A3;
+        }
+
+        /* Styling the DataTables */
+        table thead th {
+            background-color: #261F5D;
+            color: white;
+        }
+
+        table th:first-child {
+            border-radius: 6px 0 0 6px;
+        }
+
+        table th:last-child {
+            border-radius: 0 6px 6px 0;
+        }
+    </style>
 </head>
 <body class="p-5 bg-gray-50">
-<!-- Loading Indicator Overlay -->
 <div id="loading" class="fixed inset-0 bg-gray-300 opacity-75 z-50 flex justify-center items-center">
-    <div class="spinner-border h-12 w-12 border-4 rounded-full animate-spin" style="border-color: #3490dc transparent #3490dc transparent;"></div>
+    <div class="spinner-border h-12 w-12 border-4 rounded-full animate-spin"
+         style="border-color: #3490dc transparent #3490dc transparent;"></div>
+</div>
+
+<div class="flex flex-col md:flex-row justify-between items-center mb-10 mt-5">
+
+    <div class="flex justify-between items-center mb-4 md:mb-0">
+        <div class="flex items-center">
+            <img alt="DevZero logo" loading="lazy" width="48" height="48"
+                 class="text-transparent"
+                 src="https://dora.devzero.io/_next/static/media/devzero_logo.bd84b789.svg">
+            <div class="ml-4">
+                <h1 class="text-xl md:text-3xl font-bold font-mono inline-flex items-baseline space-x-3">
+                    LDA <span class="text-sm md:text-base font-medium ml-1">dashboard</span>
+                </h1>
+                <p class="text-xs font-normal leading-tight ml-14">
+                    A project by DevZero
+                </p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="p-4 shadow rounded-lg bg-white">
-        <canvas id="processesResourceUsage"></canvas>
+    <div>
+        <h3 class="text-lg font-semibold mb-2">Processes Resource Usage</h3>
+        <div class="p-4 shadow-lg canvas">
+            <canvas class="p-5" id="processesResourceUsage"></canvas>
+        </div>
     </div>
-    <div class="p-4 shadow rounded-lg bg-white">
-        <canvas id="cpuTimeSeries"></canvas>
+    <div>
+        <h3 class="text-lg font-semibold mb-2">CPU Time Series</h3>
+        <div class="p-4 shadow-lg canvas">
+            <canvas class="p-5" id="cpuTimeSeries"></canvas>
+        </div>
     </div>
-    <div class="p-4 shadow rounded-lg bg-white">
-        <canvas id="memoryTimeSeries"></canvas>
+    <div>
+        <h3 class="text-lg font-semibold mb-2">Memory Time Series</h3>
+        <div class="p-4 shadow-lg canvas">
+            <canvas class="p-5" id="memoryTimeSeries"></canvas>
+        </div>
     </div>
 </div>
 
 <div class="overflow-x-auto mt-8">
-<table id="processesTable" class="stripe" style="width:100%">
+    <table id="processesTable" class="stripe" style="width:100%">
         <thead>
-            <tr>
-                <th>PID</th>
-                <th>Name</th>
-                <th>CPU Usage (%)</th>
-                <th>Memory Usage (%)</th>
-            </tr>
+        <tr>
+            <th>PID</th>
+            <th>Name</th>
+            <th>CPU Usage (%)</th>
+            <th>Memory Usage (%)</th>
+        </tr>
         </thead>
         <tbody>
-            {{range .Processes}}
-            <tr>
-                <td>{{.PID}}</td>
-                <td>{{.Name}}</td>
-                <td>{{printf "%.2f" .CPUUsage}}</td>
-                <td>{{printf "%.2f" .MemoryUsage}}</td>
-            </tr>
-            {{end}}
+        {{range .Processes}}
+        <tr>
+            <td>{{.PID}}</td>
+            <td>{{.Name}}</td>
+            <td>{{printf "%.2f" .CPUUsage}}</td>
+            <td>{{printf "%.2f" .MemoryUsage}}</td>
+        </tr>
+        {{end}}
         </tbody>
     </table>
 </div>
@@ -67,7 +116,7 @@
             try {
                 const parsed = JSON.parse(data);
                 return parsed.data.datasets.length === 0 || parsed.data.datasets.some(ds => ds.data.length === 0);
-            } catch(e) {
+            } catch (e) {
                 return true;
             }
         }
@@ -77,7 +126,7 @@
                 document.getElementById(containerId).parentElement.innerHTML = `<p class="text-center text-gray-500">${message}</p>`;
             } else {
                 const parsedData = JSON.parse(chartData);
-                if(containerId === 'processesResourceUsage') {
+                if (containerId === 'processesResourceUsage') {
                     parsedData.options.plugins.tooltip = {
                         callbacks: {
                             beforeTitle: function (context) {

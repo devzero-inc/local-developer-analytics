@@ -86,7 +86,18 @@ type ChartPlugins struct {
 
 // ChartLegendOptions configures the chart's legend.
 type ChartLegendOptions struct {
-	Display bool `json:"display"`
+	Display  bool                `json:"display"`
+	Position string              `json:"position,omitempty"`
+	Align    string              `json:"align,omitempty"`
+	Label    *LegendLabelOptions `json:"labels,omitempty"`
+}
+
+// LegendLabelOptions configures the chart's legend label.
+type LegendLabelOptions struct {
+	BoxWidth  int    `json:"boxWidth"`
+	BoxHeight int    `json:"boxHeight"`
+	Color     string `json:"color"`
+	Padding   int    `json:"padding"`
 }
 
 // ChartTooltipOptions configures the chart's tooltips.
@@ -148,7 +159,7 @@ func PrepareCPUTimeSeriesChartData(processData map[int64][]*process.Process) (st
 					Display: false,
 				},
 			},
-			MaintainAspectRatio: true,
+			MaintainAspectRatio: false,
 			Responsive:          true,
 		},
 	}
@@ -217,7 +228,7 @@ func PrepareMemoryTimeSeriesChartData(processData map[int64][]*process.Process) 
 					Enabled: true,
 				},
 			},
-			MaintainAspectRatio: true,
+			MaintainAspectRatio: false,
 			Responsive:          true,
 		},
 	}
@@ -263,10 +274,12 @@ func PrepareCommandsExecutionTimeChartData(commands []collector.Command) (string
 		Options: ChartOptions{
 			Responsive:          true,
 			AspectRatio:         3,
-			MaintainAspectRatio: true,
+			MaintainAspectRatio: false,
 			Plugins: &ChartPlugins{
 				Legend: &ChartLegendOptions{
-					Display: true,
+					Display:  true,
+					Position: "right",
+					Align:    "center",
 				},
 			},
 		},
@@ -313,10 +326,12 @@ func PrepareCommandCategoriesExecutionTimeChartData(commands []*collector.Comman
 		Options: ChartOptions{
 			Responsive:          true,
 			AspectRatio:         2,
-			MaintainAspectRatio: true,
+			MaintainAspectRatio: false,
 			Plugins: &ChartPlugins{
 				Legend: &ChartLegendOptions{
-					Display: true,
+					Display:  true,
+					Position: "right",
+					Align:    "center",
 				},
 			},
 		},
