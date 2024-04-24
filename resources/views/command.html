@@ -8,61 +8,103 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.3/css/dataTables.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
     <script src="https://cdn.datatables.net/2.0.3/js/dataTables.js"></script>
+    <style>
+        .canvas {
+            min-height: 400px;
+            border-radius: 16px;
+            border: 2px solid #3730A3;
+        }
+
+        /* Styling the DataTables */
+        table thead th {
+            background-color: #261F5D;
+            color: white;
+        }
+
+        table th:first-child {
+            border-radius: 6px 0 0 6px;
+        }
+
+        table th:last-child {
+            border-radius: 0 6px 6px 0;
+        }
+    </style>
 </head>
 <body class="p-5 bg-gray-50">
 <!-- Loading Indicator Overlay -->
 <div id="loading" class="fixed inset-0 bg-gray-300 opacity-75 z-50 flex justify-center items-center">
-    <div class="spinner-border h-12 w-12 border-4 rounded-full animate-spin" style="border-color: #3490dc transparent #3490dc transparent;"></div>
+    <div class="spinner-border h-12 w-12 border-4 rounded-full animate-spin"
+         style="border-color: #3490dc transparent #3490dc transparent;"></div>
 </div>
 
-<div class="flex justify-end">
-    <form action="/" method="get" class="mb-4">
-        <div class="flex flex-wrap -mx-3 mb-6">
-            <div class="px-3 mb-6 md:mb-0">
-                <label for="start" class="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">Start
-                    Time:</label>
+<div class="flex flex-col md:flex-row justify-between items-center mb-10 mt-5">
+
+    <div class="flex justify-between items-center mb-4 md:mb-0">
+        <div class="flex items-center">
+            <img alt="DevZero logo" loading="lazy" width="48" height="48"
+                 class="text-transparent"
+                 src="https://dora.devzero.io/_next/static/media/devzero_logo.bd84b789.svg">
+            <div class="ml-4">
+                <h1 class="text-xl md:text-3xl font-bold font-mono inline-flex items-baseline space-x-3">
+                    LDA <span class="text-sm md:text-base font-medium ml-1">dashboard</span>
+                </h1>
+                <p class="text-xs font-normal leading-tight ml-14">
+                    A project by DevZero
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <form action="/" method="get">
+        <div class="flex flex-wrap -mx-3">
+            <div class="w-full md:w-2/5 px-3 mb-3 md:mb-0">
+                <label for="start" class="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">Start Time</label>
                 <input type="datetime-local" id="start" name="start" value="{{.StartTime}}"
-                       class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500">
+                       class="appearance-none block w-full bg-white text-black border border-gray-300 rounded py-3 px-4 leading-tight focus:outline-none focus:border-gray-500">
             </div>
-            <div class="px-3 mb-6 md:mb-0">
-                <label for="end" class="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">End
-                    Time:</label>
+            <div class="w-full md:w-2/5 px-3 mb-3 md:mb-0">
+                <label for="end" class="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">End Time</label>
                 <input type="datetime-local" id="end" name="end" value="{{.EndTime}}"
-                       class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500">
+                       class="appearance-none block w-full bg-white text-black border border-gray-300 rounded py-3 px-4 leading-tight focus:outline-none focus:border-gray-500">
             </div>
-            <div class="px-3 flex items-end">
+            <div class="w-full md:w-1/5 px-3 flex items-end">
                 <button type="submit"
-                        class="mt-2 px-4 py-3 bg-blue-500 text-white rounded focus:outline-none focus:border-gray-500 focus:bg-blue-600 leading-tight">
+                        class="w-full px-4 py-3 bg-blue-500 text-white rounded focus:outline-none focus:border-blue-700 focus:bg-blue-600">
                     Filter
                 </button>
             </div>
         </div>
     </form>
+
 </div>
-<div class="w-full">
-    <div class="p-4 shadow-lg rounded-lg">
-        <canvas id="commandsExecutionTime"></canvas>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+        <h3 class="text-lg font-semibold mb-2">Commands Execution Time</h3>
+        <div class="p-4 shadow-lg canvas">
+            <canvas class="p-5" id="commandsExecutionTime"></canvas>
+        </div>
     </div>
-</div>
-<div class="overflow-x-auto mt-8">
-    <table id="commandsTable" class="stripe" style="width:100%">
-        <thead>
-        <tr>
-            <th>Category</th>
-            <th>Command</th>
-            <th>Execution Time</th>
-        </tr>
-        </thead>
-        <tbody>
-        {{range .Commands}}
-        <tr>
-            <td>{{.Category}}</td>
-            <td>{{.Command}}</td>
-            <td>{{.ExecutionTime}}</td>
-        </tr>
-        {{end}}
-        </tbody>
-    </table>
+    <div class="overflow-x-auto mt-8">
+        <table id="commandsTable" class="stripe" style="width:100%">
+            <thead>
+            <tr>
+                <th>Category</th>
+                <th>Command</th>
+                <th>Execution Time</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{range .Commands}}
+            <tr>
+                <td>{{.Category}}</td>
+                <td>{{.Command}}</td>
+                <td>{{.ExecutionTime}}</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
 </div>
 </body>
 <script>

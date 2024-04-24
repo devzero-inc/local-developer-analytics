@@ -40,9 +40,9 @@ func GetAllCommandsForPeriod(start int64, end int64) ([]*Command, error) {
 
 	query := `SELECT id, category, SUM(execution_time) AS execution_time 
               FROM commands 
-              WHERE start_time >= ? AND start_time <= ? 
+              WHERE start_time BETWEEN ? AND ? 
               GROUP BY category 
-              ORDER BY category ASC, SUM(execution_time) DESC`
+              ORDER BY category ASC, SUM(execution_time) DESC;`
 
 	if err := database.DB.Select(&commands, query, start, end); err != nil {
 		logging.Log.Err(err).Msg("Failed to get aggregated commands with start and end times")
@@ -58,9 +58,9 @@ func GetAllCommandsForCategoryForPeriod(category string, start int64, end int64)
 
 	query := `SELECT id, category, command, SUM(execution_time) AS execution_time 
               FROM commands 
-              WHERE category = ? AND start_time >= ? AND start_time <= ? 
+              WHERE category = ? AND start_time BETWEEN ? AND ? 
               GROUP BY command 
-              ORDER BY command ASC, SUM(execution_time) DESC`
+              ORDER BY command ASC, SUM(execution_time) DESC;`
 
 	if err := database.DB.Select(&commands, query, category, start, end); err != nil {
 		logging.Log.Err(err).Msg("Failed to get aggregated commands with start and end times")
