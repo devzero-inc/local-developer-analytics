@@ -1,5 +1,13 @@
 SHELL := /bin/sh
-BIN := /usr/local/bin
+OS:=$(shell uname -s)
+
+# set BIN path, used to check buf version
+ifeq ($(OS),Linux)
+	BIN := /usr/local/bin
+endif
+ifeq ($(OS),Darwin) # Assume Mac OS X
+	BIN := /opt/homebrew/bin
+endif
 
 REV := $(shell git rev-parse HEAD)
 CHANGES := $(shell test -n "$$(git status --porcelain)" && echo '+CHANGES' || true)
@@ -32,7 +40,6 @@ BUF_BINARY_NAME := buf
 
 # count processors
 NPROCS:=1
-OS:=$(shell uname -s)
 ifeq ($(OS),Linux)
 	NPROCS:=$(shell grep -c ^processor /proc/cpuinfo)
 endif
@@ -79,14 +86,26 @@ BUF_INSTALLED_VERSION := $(shell if command -v $(BIN)/$(BUF_BINARY_NAME) >/dev/n
 VERSION_MATCH := $(findstring ${BUF_INSTALLED_VERSION},$(BUF_VERSION))
 ## Install buf binary
 buf:
+ifeq ($(OS),Linux)
+	@echo "linux detected"
 	@if [ -x "$(BIN)/$(BUF_BINARY_NAME)" ] && [ -n "$(VERSION_MATCH)" ]; then \
 		echo "The required version of $(BUF_BINARY_NAME) is already installed: $(BUF_VERSION)"; \
 	else \
 		echo "Installing or updating $(BUF_BINARY_NAME)..."; \
-		curl -sSL "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/${BUF_BINARY_NAME}-$(shell uname -s)-$(shell uname -m)" -o "${BIN}/${BUF_BINARY_NAME}"; \
-		chmod +x $(BIN)/$(BUF_BINARY_NAME); \
+		sudo curl -sSL "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/${BUF_BINARY_NAME}-$(shell uname -s)-$(shell uname -m)" -o "${BIN}/${BUF_BINARY_NAME}"; \
+		sudo chmod +x $(BIN)/$(BUF_BINARY_NAME); \
+	fi
+endif
+ifeq ($(OS),Darwin) # Assume Mac OS X
+	@echo "MacOS detected"
+	@if [ -x "$(BIN)/$(BUF_BINARY_NAME)" ] && [ -n "$(VERSION_MATCH)" ]; then \
+		echo "The required version of $(BUF_BINARY_NAME) is already installed: $(BUF_VERSION)"; \
+	else \
+		echo "Installing or updating $(BUF_BINARY_NAME)..."; \
+		brew install buf; \
 	fi
 
+endif
 
 ## Build and debug
 debug: build
