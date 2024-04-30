@@ -103,11 +103,6 @@ func (c *Collector) Collect() {
 
 // collectSystemInformation uses exponential backoff for intervals between collections.
 func (c *Collector) collectSystemInformation(ctx context.Context, initialDuration time.Duration, increaseFactor float64, maxDuration time.Duration) {
-	// Perform initial collection
-	if err := c.collectOnce(); err != nil {
-		c.logger.Error().Err(err).Msg("Failed to collect system information")
-	}
-
 	currentDuration := initialDuration
 
 	for {
@@ -167,6 +162,11 @@ func (c *Collector) collectOnce() error {
 func (c *Collector) onStartCommand() {
 	c.collectionConfig.collectionMutex.Lock()
 	defer c.collectionConfig.collectionMutex.Unlock()
+
+	// Perform initial collection for every command
+	if err := c.collectOnce(); err != nil {
+		c.logger.Error().Err(err).Msg("Failed to collect system information")
+	}
 
 	c.collectionConfig.activeCommandsCounter++
 	// If the collection is not running, start it with a timeout
