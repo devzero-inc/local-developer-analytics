@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-	"github.com/spf13/afero"
 	"html/template"
 	"lda/config"
 	"lda/util"
 	"os/exec"
 	"os/user"
 	"path/filepath"
+
+	"github.com/spf13/afero"
 
 	"github.com/rs/zerolog"
 )
