@@ -106,22 +106,30 @@ func ConfigureUserSystemInfo(currentConf *Config) {
 			diffMsg := strings.Join(diffs, "\n")
 			fmt.Fprintf(config.SysConfig.Out, "Differences detected in configuration:\n%s\n", diffMsg)
 
-			// Prompt user to choose between old and new config
-			prompt := promptui.Select{
-				Label: "Configuration drift detected. Do you want to update the configuration to the new settings?",
-				Items: []string{YesUpdate, NoKeep},
+			// allow for non-user interrupted flow
+			var result string
+			autoupdate := os.Getenv("LDA_AUTO_UPDATE_CONFIG")
+			if strings.EqualFold(autoupdate, "true") {
+				result = YesUpdate
 			}
 
-			_, result, err := prompt.Run()
+			// if no env vars, prompt the user
+			if result == "" {
+				// Prompt user to choose between old and new config
+				prompt := promptui.Select{
+					Label: "Configuration drift detected. Do you want to update the configuration to the new settings?",
+					Items: []string{YesUpdate, NoKeep},
+				}
 
-			if err != nil {
-				logging.Log.Error().Err(err).Msg("Prompt failed")
-				fmt.Fprintf(config.SysConfig.ErrOut, "Prompt failed: %s\n", err)
-				os.Exit(1)
+				_, result, err = prompt.Run()
+				if err != nil {
+					logging.Log.Error().Err(err).Msg("Prompt failed")
+					fmt.Fprintf(config.SysConfig.ErrOut, "Prompt failed: %s\n", err)
+					os.Exit(1)
+				}
 			}
 
 			if result == YesUpdate {
-
 				shellType, shellLocation, err := config.GetShell()
 				if err != nil {
 					logging.Log.Error().Err(err).Msg("Failed to setup shell")
