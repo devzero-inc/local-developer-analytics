@@ -225,6 +225,7 @@ func ReadDZWorkspaceConfig() (collector.AuthConfig, error) {
 	const (
 		devzeroConfigPath    = "/etc/devzero/configs"
 		devzeroTeamFile      = "DEVZERO_TEAM_ID"
+		devzeroUserFile      = "DEVZERO_USER_ID"
 		devzeroWorkspaceFile = "DEVZERO_WORKSPACE_ID"
 	)
 
@@ -237,6 +238,14 @@ func ReadDZWorkspaceConfig() (collector.AuthConfig, error) {
 		data, err := os.ReadFile(teamPath)
 		if err == nil && len(data) > 0 {
 			teamId = string(data)
+		}
+	}
+
+	userPath := filepath.Join(devzeroConfigPath, devzeroUserFile)
+	if util.FileExists(userPath) {
+		data, err := os.ReadFile(userPath)
+		if err == nil && len(data) > 0 {
+			userId = string(data)
 		}
 	}
 
