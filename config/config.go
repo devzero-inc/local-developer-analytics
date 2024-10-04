@@ -40,6 +40,12 @@ type Config struct {
 	ExcludeRegex string `mapstructure:"exclude_regex"`
 	// ProcessCollectionType type of process collection to use, ps or psutil
 	ProcessCollectionType string `mapstructure:"process_collection_type"`
+	// TeamID is the team identifier for the workspace
+	TeamID string `mapstructure:"team_id"`
+	// UserID is the user identifier for the workspace
+	UserID string `mapstructure:"user_id"`
+	// WorkspaceID is the workspace identifier
+	WorkspaceID string `mapstructure:"workspace_id"`
 }
 
 // SystemConfig Configuration that is not available via the configuration file
