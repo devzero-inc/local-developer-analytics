@@ -2,12 +2,16 @@ package user
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"lda/collector"
 	"lda/config"
 	"lda/database"
 	"lda/logging"
+	"lda/util"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/manifoldco/promptui"
@@ -202,4 +206,83 @@ func CompareConfig(existingConf, currentConf *Config) (bool, []string) {
 	}
 
 	return len(diffs) > 0, diffs
+}
+
+// GetStoragePath returns the path to the devzero storage directory based on the operating system
+func GetStoragePath(os config.OSType, home string) (string, error) {
+	switch os {
+	case config.MacOS:
+		return filepath.Join(home, "Library", "Application Support", "devzero"), nil
+	case config.Linux:
+		return filepath.Join(home, ".local", "share", "devzero"), nil
+	default:
+		return "", errors.New("unsupported os")
+	}
+}
+
+// ReadDZWorkspaceConfig reads the DevZero workspace configuration
+func ReadDZWorkspaceConfig() (collector.AuthConfig, error) {
+	const (
+		devzeroConfigPath    = "/etc/devzero/configs"
+		devzeroTeamFile      = "DEVZERO_TEAM_ID"
+		devzeroWorkspaceFile = "DEVZERO_WORKSPACE_ID"
+	)
+
+	userId := ""
+	teamId := ""
+	workspaceId := ""
+
+	teamPath := filepath.Join(devzeroConfigPath, devzeroTeamFile)
+	if util.FileExists(teamPath) {
+		data, err := os.ReadFile(teamPath)
+		if err == nil && len(data) > 0 {
+			teamId = string(data)
+		}
+	}
+
+	workspacePath := filepath.Join(devzeroConfigPath, devzeroWorkspaceFile)
+	if util.FileExists(workspacePath) {
+		data, err := os.ReadFile(workspacePath)
+		if err == nil && len(data) > 0 {
+			workspaceId = string(data)
+		}
+	}
+
+	return collector.AuthConfig{
+		UserID:      userId,
+		TeamID:      teamId,
+		WorkspaceID: workspaceId,
+	}, nil
+}
+
+// ReadDZCliConfig reads the DevZero workspace configuration
+func ReadDZCliConfig(path string) (collector.AuthConfig, error) {
+	const (
+		localUserFile = "user_id.txt"
+		localTeamFile = "team_id.txt"
+	)
+
+	userId := ""
+	teamId := ""
+
+	localUserPath := filepath.Join(path, localUserFile)
+	if util.FileExists(localUserPath) {
+		data, err := os.ReadFile(localUserPath)
+		if err == nil && len(data) > 0 {
+			userId = string(data)
+		}
+	}
+
+	localTeamPath := filepath.Join(path, localTeamFile)
+	if util.FileExists(localTeamPath) {
+		data, err := os.ReadFile(localTeamPath)
+		if err == nil && len(data) > 0 {
+			teamId = string(data)
+		}
+	}
+
+	return collector.AuthConfig{
+		UserID: userId,
+		TeamID: teamId,
+	}, nil
 }

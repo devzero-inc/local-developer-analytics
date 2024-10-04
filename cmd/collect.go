@@ -24,9 +24,28 @@ var (
 	}
 )
 
-func collect(_ *cobra.Command, _ []string) error {
+func init() {
 
-	var err error
+	includeShowFlagsForCollect(collectCmd)
+}
+
+func includeShowFlagsForCollect(cmd *cobra.Command) {
+	cmd.PersistentFlags().BoolP("auto-credentials", "a", false, "Try to automatically generate the credentails")
+	cmd.PersistentFlags().BoolP("workspace", "w", false, "Is collection executed in a DevZero workspace")
+}
+
+func collect(cmd *cobra.Command, _ []string) error {
+	autoCredentials, err := cmd.Flags().GetBool("auto-credentials")
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to get auto-credentials flag")
+		return errors.Wrap(err, "failed to get auto-credentials flag")
+	}
+
+	isWorkspace, err := cmd.Flags().GetBool("workspace")
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to get workspace flag")
+		return errors.Wrap(err, "failed to get workspace flag")
+	}
 
 	user.Conf, err = user.GetConfig()
 	if err != nil {
@@ -64,11 +83,37 @@ func collect(_ *cobra.Command, _ []string) error {
 		return errors.Wrap(err, "failed to create process collector")
 	}
 
+	auth := collector.AuthConfig{
+		UserID:      config.AppConfig.UserID,
+		TeamID:      config.AppConfig.TeamID,
+		WorkspaceID: config.AppConfig.WorkspaceID,
+	}
+
+	if autoCredentials {
+		if isWorkspace {
+			auth, err = user.ReadDZWorkspaceConfig()
+			if err != nil {
+				return errors.Wrap(err, "failed to read DevZero config")
+			}
+		} else {
+			path, err := user.GetStoragePath(config.OSType(user.Conf.Os), user.Conf.HomeDir)
+			if err != nil {
+				logging.Log.Error().Err(err).Msg("Failed to get storage path")
+				return errors.Wrap(err, "failed to get storage path")
+			}
+			auth, err = user.ReadDZCliConfig(path)
+			if err != nil {
+				return errors.Wrap(err, "failed to read DevZero config")
+			}
+		}
+	}
+
 	collectorInstance := collector.NewCollector(
 		collector.SocketPath,
 		grpcClient,
 		logging.Log,
 		intervalConfig,
+		auth,
 		config.AppConfig.ExcludeRegex,
 		procCol,
 	)
