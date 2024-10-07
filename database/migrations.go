@@ -13,6 +13,7 @@ func RunMigrations() {
 	createCommandsTable()
 	createConfigTable()
 	addIndexOnProcesses()
+	shellTypeToLocation()
 }
 
 func ensureMigrationTableExists() {
@@ -110,14 +111,32 @@ func createConfigTable() {
 			home_dir TEXT NOT NULL,
 			lda_dir TEXT NOT NULL,
 			is_root BOOLEAN NOT NULL,
-			exe_path TEXT NOT NULL,
-			shell_type INTEGER NOT NULL,
-			shell_location TEXT NOT NULL
+			exe_path TEXT NOT NULL
 		);`
 
 		_, err := DB.Exec(createConfigTableSQL)
 		if err != nil {
 			fmt.Fprintf(config.SysConfig.ErrOut, "Failed to create config table: %s\n", err)
+			os.Exit(1)
+		}
+		recordMigration(migrationName)
+	}
+}
+
+func shellTypeToLocation() {
+	migrationName := "shell_type_to_location"
+	if !migrationApplied(migrationName) {
+		shellTypeToLocationSQL := `
+		CREATE TABLE IF NOT EXISTS shell_type_to_location (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			shell_type INTEGER NOT NULL,
+			shell_location TEXT NOT NULL,
+			config_id INTEGER NOT NULL REFERENCES config(id)
+		);`
+
+		_, err := DB.Exec(shellTypeToLocationSQL)
+		if err != nil {
+			fmt.Fprintf(config.SysConfig.ErrOut, "Failed to add shell_type_to_location column: %s\n", err)
 			os.Exit(1)
 		}
 		recordMigration(migrationName)

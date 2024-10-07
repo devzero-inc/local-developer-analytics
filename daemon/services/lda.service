@@ -3,7 +3,6 @@ Description=Devzero.io LDA Service
 After=network.target
 
 [Service]
-Environment="SHELL={{.Shell}}"
 Environment="HOME={{.Home}}"
 User={{.Username}}
 Group={{.Group}}

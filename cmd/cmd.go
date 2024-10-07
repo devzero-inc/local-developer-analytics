@@ -14,6 +14,7 @@ import (
 	"lda/util"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -31,12 +32,7 @@ var (
 		Run: lda,
 	}
 
-	installCmd = &cobra.Command{
-		Use:   "install",
-		Short: "Install daemon runner",
-		Long:  `Install daemon runner for LDA Project.`,
-		RunE:  install,
-	}
+	installCmd = newInstallCmd()
 
 	uninstallCmd = &cobra.Command{
 		Use:   "uninstall",
@@ -81,6 +77,23 @@ var (
 	}
 )
 
+var installFlags struct {
+	shells []string
+}
+
+func newInstallCmd() *cobra.Command {
+	installCmd := &cobra.Command{
+		Use:   "install",
+		Short: "Install daemon runner",
+		Long:  `Install daemon runner for LDA Project.`,
+		RunE:  install,
+	}
+
+	installCmd.Flags().StringSliceVarP(&installFlags.shells, "shell", "s", []string{}, fmt.Sprintf("Shells to instrument %+v; --shell=all for all shells", config.SupportedShells))
+
+	return installCmd
+}
+
 const (
 	// days are amount of days that old data will be retained
 	days = 5
@@ -121,7 +134,6 @@ func includeShowFlagsForInstall(cmd *cobra.Command) {
 }
 
 func setupConfig() {
-
 	// setting up the system configuration
 	config.SetupSysConfig()
 
@@ -203,12 +215,12 @@ func reload(_ *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:       user.Conf.ExePath,
-		HomeDir:       user.Conf.HomeDir,
-		IsRoot:        user.Conf.IsRoot,
-		Os:            config.OSType(user.Conf.Os),
-		SudoExecUser:  user.Conf.User,
-		ShellLocation: user.Conf.ShellLocation,
+		ExePath:             user.Conf.ExePath,
+		HomeDir:             user.Conf.HomeDir,
+		IsRoot:              user.Conf.IsRoot,
+		Os:                  config.OSType(user.Conf.Os),
+		SudoExecUser:        user.Conf.User,
+		ShellTypeToLocation: user.Conf.ShellTypeToLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
@@ -226,12 +238,12 @@ func start(_ *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:       user.Conf.ExePath,
-		HomeDir:       user.Conf.HomeDir,
-		IsRoot:        user.Conf.IsRoot,
-		Os:            config.OSType(user.Conf.Os),
-		SudoExecUser:  user.Conf.User,
-		ShellLocation: user.Conf.ShellLocation,
+		ExePath:             user.Conf.ExePath,
+		HomeDir:             user.Conf.HomeDir,
+		IsRoot:              user.Conf.IsRoot,
+		Os:                  config.OSType(user.Conf.Os),
+		SudoExecUser:        user.Conf.User,
+		ShellTypeToLocation: user.Conf.ShellTypeToLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
@@ -249,12 +261,12 @@ func stop(_ *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:       user.Conf.ExePath,
-		HomeDir:       user.Conf.HomeDir,
-		IsRoot:        user.Conf.IsRoot,
-		Os:            config.OSType(user.Conf.Os),
-		SudoExecUser:  user.Conf.User,
-		ShellLocation: user.Conf.ShellLocation,
+		ExePath:             user.Conf.ExePath,
+		HomeDir:             user.Conf.HomeDir,
+		IsRoot:              user.Conf.IsRoot,
+		Os:                  config.OSType(user.Conf.Os),
+		SudoExecUser:        user.Conf.User,
+		ShellTypeToLocation: user.Conf.ShellTypeToLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
@@ -268,6 +280,26 @@ func stop(_ *cobra.Command, _ []string) error {
 }
 
 func install(cmd *cobra.Command, _ []string) error {
+	// validate the stuff
+	if len(installFlags.shells) > 0 {
+		for _, shellType := range installFlags.shells {
+			if strings.EqualFold(shellType, "all") {
+				installFlags.shells = config.SupportedShells
+				break
+			} else if config.GetShellType(shellType) == -1 {
+				fmt.Fprintf(config.SysConfig.ErrOut, "Unsupported shell: %s\nPlease choose one of: %+v\n", shellType, config.SupportedShells)
+				os.Exit(1)
+			}
+		}
+	}
+
+	// if shells are provided, lets deal with it
+	if len(installFlags.shells) > 0 {
+		user.Conf.ShellTypeToLocation = make(map[config.ShellType]string)
+		for _, shell := range installFlags.shells {
+			user.Conf.ShellTypeToLocation[config.GetShellType(shell)] = shell
+		}
+	}
 
 	autoCredentials, err := cmd.Flags().GetBool("auto-credentials")
 	if err != nil {
@@ -283,14 +315,14 @@ func install(cmd *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:        user.Conf.ExePath,
-		HomeDir:        user.Conf.HomeDir,
-		IsRoot:         user.Conf.IsRoot,
-		Os:             config.OSType(user.Conf.Os),
-		SudoExecUser:   user.Conf.User,
-		ShellLocation:  user.Conf.ShellLocation,
-		AutoCredential: autoCredentials,
-		IsWorkspace:    isWorkspace,
+		ExePath:             user.Conf.ExePath,
+		HomeDir:             user.Conf.HomeDir,
+		IsRoot:              user.Conf.IsRoot,
+		Os:                  config.OSType(user.Conf.Os),
+		SudoExecUser:        user.Conf.User,
+		AutoCredential:      autoCredentials,
+		IsWorkspace:         isWorkspace,
+		ShellTypeToLocation: user.Conf.ShellTypeToLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
@@ -300,30 +332,31 @@ func install(cmd *cobra.Command, _ []string) error {
 		return errors.Wrap(err, "failed to install LDA daemon configuration file")
 	}
 
-	shellConfig := &shell.Config{
-		ShellType:     config.ShellType(user.Conf.ShellType),
-		ShellLocation: user.Conf.ShellLocation,
-		IsRoot:        user.Conf.IsRoot,
-		SudoExecUser:  user.Conf.User,
-		LdaDir:        user.Conf.LdaDir,
-		HomeDir:       user.Conf.HomeDir,
-	}
+	for shellType, shellLocation := range user.Conf.ShellTypeToLocation {
+		shellConfig := &shell.Config{
+			ShellType:     config.ShellType(shellType),
+			ShellLocation: shellLocation,
+			IsRoot:        user.Conf.IsRoot,
+			SudoExecUser:  user.Conf.User,
+			LdaDir:        user.Conf.LdaDir,
+			HomeDir:       user.Conf.HomeDir,
+		}
 
-	shl, err := shell.NewShell(shellConfig, logging.Log)
+		shl, err := shell.NewShell(shellConfig, logging.Log)
 
-	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to setup shell")
-		os.Exit(1)
-	}
+		if err != nil {
+			logging.Log.Error().Err(err).Msg("Failed to setup shell")
+			os.Exit(1)
+		}
 
-	if err := shl.InstallShellConfiguration(); err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to install shell configuration")
-		return errors.Wrap(err, "failed to install LDA shell configuration files")
-	}
+		if err := shl.InstallShellConfiguration(); err != nil {
+			logging.Log.Error().Err(err).Msg("Failed to install shell configuration")
+			return errors.Wrap(err, "failed to install LDA shell configuration files")
+		}
 
-	if err := shl.InjectShellSource(); err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to inject shell source")
-		return errors.Wrap(err, "failed to inject LDA shell source")
+		if err := shl.InjectShellSource(); err != nil {
+			logging.Log.Error().Err(err).Msgf("Failed to inject shell source (%s); will reattempt at `start` time", shellLocation)
+		}
 	}
 
 	fmt.Fprintln(config.SysConfig.Out, "LDA daemon installed successfully.")
@@ -335,39 +368,41 @@ func uninstall(_ *cobra.Command, _ []string) error {
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:       user.Conf.ExePath,
-		HomeDir:       user.Conf.HomeDir,
-		IsRoot:        user.Conf.IsRoot,
-		Os:            config.OSType(user.Conf.Os),
-		SudoExecUser:  user.Conf.User,
-		ShellLocation: user.Conf.ShellLocation,
+		ExePath:             user.Conf.ExePath,
+		HomeDir:             user.Conf.HomeDir,
+		IsRoot:              user.Conf.IsRoot,
+		Os:                  config.OSType(user.Conf.Os),
+		SudoExecUser:        user.Conf.User,
+		ShellTypeToLocation: user.Conf.ShellTypeToLocation,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 
-	shellConfig := &shell.Config{
-		ShellType:     config.ShellType(user.Conf.ShellType),
-		ShellLocation: user.Conf.ShellLocation,
-		IsRoot:        user.Conf.IsRoot,
-		SudoExecUser:  user.Conf.User,
-		LdaDir:        user.Conf.LdaDir,
-		HomeDir:       user.Conf.HomeDir,
-	}
-	shl, err := shell.NewShell(shellConfig, logging.Log)
+	for shellType, shellLocation := range user.Conf.ShellTypeToLocation {
+		shellConfig := &shell.Config{
+			ShellType:     config.ShellType(shellType),
+			ShellLocation: shellLocation,
+			IsRoot:        user.Conf.IsRoot,
+			SudoExecUser:  user.Conf.User,
+			LdaDir:        user.Conf.LdaDir,
+			HomeDir:       user.Conf.HomeDir,
+		}
+		shl, err := shell.NewShell(shellConfig, logging.Log)
 
-	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to setup shell")
-		os.Exit(1)
+		if err != nil {
+			logging.Log.Error().Err(err).Msg("Failed to setup shell")
+			os.Exit(1)
+		}
+
+		if err := shl.DeleteShellConfiguration(); err != nil {
+			logging.Log.Error().Err(err).Msg("Failed to delete shell configuration")
+			return errors.Wrap(err, "failed to delete LDA shell configuration files")
+		}
 	}
 
 	fmt.Fprintln(config.SysConfig.Out, "Uninstalling LDA daemon...")
 	if err := dmn.DestroyDaemonConfiguration(); err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to uninstall daemon configuration")
 		return errors.Wrap(err, "failed to uninstall LDA daemon configuration file")
-	}
-
-	if err := shl.DeleteShellConfiguration(); err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to delete shell configuration")
-		return errors.Wrap(err, "failed to delete LDA shell configuration files")
 	}
 
 	fmt.Fprintln(config.SysConfig.Out, `Daemon service files and shell configuration deleted successfully, 
