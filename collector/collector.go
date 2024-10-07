@@ -172,9 +172,12 @@ func (c *Collector) collectOnce() error {
 			)
 		}
 
-		if err := c.client.SendProcesses(processMetrics, c.protoAuthConfig); err != nil {
-			c.logger.Error().Err(err).Msg("Failed to send processes")
-		}
+		go func() {
+			if err := c.client.SendProcesses(processMetrics, c.protoAuthConfig); err != nil {
+				c.logger.Error().Err(err).Msg("Failed to send processes")
+			}
+		}()
+
 	}
 
 	return nil
@@ -348,9 +351,12 @@ func (c *Collector) handleEndCommand(parts []string) error {
 		c.onEndCommand()
 
 		if c.client != nil {
-			if err := c.client.SendCommands([]*gen.Command{MapCommandToProto(command)}, c.protoAuthConfig); err != nil {
-				c.logger.Error().Err(err).Msg("Failed to send command")
-			}
+
+			go func() {
+				if err := c.client.SendCommands([]*gen.Command{MapCommandToProto(command)}, c.protoAuthConfig); err != nil {
+					c.logger.Error().Err(err).Msg("Failed to send command")
+				}
+			}()
 		}
 	} else {
 		c.logger.Error().Msg("Matching start command not found")
