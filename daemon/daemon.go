@@ -27,6 +27,7 @@ const (
 	MacOSDaemonTemplateLocation = "services/lda.plist"
 	ServicePermission           = 0644
 	DirPermission               = 0755
+	BaseCollectCommand          = "collect"
 )
 
 // Embedding scripts directory
@@ -36,12 +37,14 @@ var templateFS embed.FS
 
 // Config is the configuration for the daemon service
 type Config struct {
-	ExePath       string
-	ShellLocation string
-	HomeDir       string
-	Os            config.OSType
-	IsRoot        bool
-	SudoExecUser  *user.User
+	ExePath        string
+	ShellLocation  string
+	HomeDir        string
+	Os             config.OSType
+	IsRoot         bool
+	SudoExecUser   *user.User
+	AutoCredential bool
+	IsWorkspace    bool
 }
 
 // Daemon is the service that configures background service
@@ -89,6 +92,25 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 		}
 		tmpConf["Group"] = group.Name
 	}
+
+	collectCmd := []string{
+		BaseCollectCommand,
+	}
+	if d.config.AutoCredential {
+		collectCmd = append(collectCmd, "-a")
+	}
+	if d.config.IsWorkspace {
+		collectCmd = append(collectCmd, "-w")
+	}
+
+	// create command from args in colllectCmd
+	var command string
+	for _, arg := range collectCmd {
+		command += arg + " "
+	}
+
+	tmpConf["CollectCommand"] = command
+	tmpConf["CollectCommandSplit"] = collectCmd
 
 	if err := tmpl.Execute(&content, tmpConf); err != nil {
 		d.logger.Err(err).Msg("Failed to execute daemon template")

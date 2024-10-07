@@ -92,6 +92,7 @@ func init() {
 
 	includeShowFlagsForLda(ldaCmd)
 	includeShowFlagsForServe(serveCmd)
+	includeShowFlagsForInstall(installCmd)
 
 	cobra.OnInitialize(setupConfig)
 
@@ -112,6 +113,11 @@ func includeShowFlagsForLda(cmd *cobra.Command) {
 
 func includeShowFlagsForServe(cmd *cobra.Command) {
 	cmd.Flags().StringP("port", "p", "8080", "Port to serve the frontend client")
+}
+
+func includeShowFlagsForInstall(cmd *cobra.Command) {
+	cmd.Flags().BoolP("auto-credentials", "a", false, "Try to automatically generate the credentails")
+	cmd.Flags().BoolP("workspace", "w", false, "Is collection executed in a DevZero workspace")
 }
 
 func setupConfig() {
@@ -261,17 +267,30 @@ func stop(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func install(_ *cobra.Command, _ []string) error {
+func install(cmd *cobra.Command, _ []string) error {
 
+	autoCredentials, err := cmd.Flags().GetBool("auto-credentials")
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to get auto-credentials flag")
+		return errors.Wrap(err, "failed to get auto-credentials flag")
+	}
+
+	isWorkspace, err := cmd.Flags().GetBool("workspace")
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to get workspace flag")
+		return errors.Wrap(err, "failed to get workspace flag")
+	}
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
-		ExePath:       user.Conf.ExePath,
-		HomeDir:       user.Conf.HomeDir,
-		IsRoot:        user.Conf.IsRoot,
-		Os:            config.OSType(user.Conf.Os),
-		SudoExecUser:  user.Conf.User,
-		ShellLocation: user.Conf.ShellLocation,
+		ExePath:        user.Conf.ExePath,
+		HomeDir:        user.Conf.HomeDir,
+		IsRoot:         user.Conf.IsRoot,
+		Os:             config.OSType(user.Conf.Os),
+		SudoExecUser:   user.Conf.User,
+		ShellLocation:  user.Conf.ShellLocation,
+		AutoCredential: autoCredentials,
+		IsWorkspace:    isWorkspace,
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 

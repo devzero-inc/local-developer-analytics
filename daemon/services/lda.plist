@@ -5,7 +5,9 @@
     <key>ProgramArguments</key>
     <array>
         <string>{{.BinaryPath}}</string>
-        <string>collect</string>
+	{{- range .CollectCommandSplit }}
+        <string>{{.}}</string>
+        {{- end }}
     </array>
     <key>RunAtLoad</key>
     <true/>
