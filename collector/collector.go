@@ -27,6 +27,8 @@ type Collector struct {
 	logger           zerolog.Logger
 	excludeRegex     string
 	collectionConfig collectionConfig
+	authConfig       AuthConfig
+	protoAuthConfig  *gen.Auth
 	intervalConfig   IntervalConfig
 }
 
@@ -37,6 +39,13 @@ type IntervalConfig struct {
 	CommandIntervalMultiplier float64
 	MaxConcurrentCommands     int
 	MaxDuration               time.Duration
+}
+
+// AuthConfig contains the configuration for the command processing and authentication
+type AuthConfig struct {
+	TeamID      string
+	UserID      string
+	WorkspaceID string
 }
 
 // collectionConfig contains the configuration for the collection process
@@ -58,8 +67,9 @@ type collectionConfig struct {
 }
 
 // NewCollector creates a new collector instance
-func NewCollector(socketPath string, client *client.Client, logger zerolog.Logger, config IntervalConfig, excludeRegex string, process process.SystemProcess) *Collector {
-	return &Collector{
+func NewCollector(socketPath string, client *client.Client, logger zerolog.Logger, config IntervalConfig, auth AuthConfig, excludeRegex string, process process.SystemProcess) *Collector {
+
+	collector := &Collector{
 		socketPath: socketPath,
 		client:     client,
 		logger:     logger,
@@ -68,8 +78,19 @@ func NewCollector(socketPath string, client *client.Client, logger zerolog.Logge
 			process:         process,
 		},
 		intervalConfig: config,
+		authConfig:     auth,
 		excludeRegex:   excludeRegex,
 	}
+
+	if auth.TeamID != "" && auth.UserID != "" {
+		collector.protoAuthConfig = &gen.Auth{
+			UserId:      auth.UserID,
+			TeamId:      auth.TeamID,
+			WorkspaceId: &auth.WorkspaceID,
+		}
+	}
+
+	return collector
 }
 
 // Collect starts the collection of command and system information
@@ -151,7 +172,7 @@ func (c *Collector) collectOnce() error {
 			)
 		}
 
-		if err := c.client.SendProcesses(processMetrics); err != nil {
+		if err := c.client.SendProcesses(processMetrics, c.protoAuthConfig); err != nil {
 			c.logger.Error().Err(err).Msg("Failed to send processes")
 		}
 	}
@@ -327,7 +348,7 @@ func (c *Collector) handleEndCommand(parts []string) error {
 		c.onEndCommand()
 
 		if c.client != nil {
-			if err := c.client.SendCommands([]*gen.Command{MapCommandToProto(command)}); err != nil {
+			if err := c.client.SendCommands([]*gen.Command{MapCommandToProto(command)}, c.protoAuthConfig); err != nil {
 				c.logger.Error().Err(err).Msg("Failed to send command")
 			}
 		}

@@ -3,13 +3,14 @@ package client
 import (
 	"context"
 	"fmt"
+	gen "lda/gen/api/v1"
+	"lda/logging"
+	"time"
+
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-	gen "lda/gen/api/v1"
-	"lda/logging"
-	"time"
 )
 
 // Config holds configuration for the client connection.
@@ -66,12 +67,13 @@ func NewClient(config Config) (*Client, error) {
 }
 
 // SendCommands sends a list of commands to the server
-func (c *Client) SendCommands(commands []*gen.Command) error {
+func (c *Client) SendCommands(commands []*gen.Command, auth *gen.Auth) error {
 
 	client := gen.NewCollectorServiceClient(c.conn)
 
 	req := &gen.SendCommandsRequest{
 		Commands: commands,
+		Auth:     auth,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
@@ -86,12 +88,13 @@ func (c *Client) SendCommands(commands []*gen.Command) error {
 }
 
 // SendProcesses sends a list of processes to the server
-func (c *Client) SendProcesses(processes []*gen.Process) error {
+func (c *Client) SendProcesses(processes []*gen.Process, auth *gen.Auth) error {
 
 	client := gen.NewCollectorServiceClient(c.conn)
 
 	req := &gen.SendProcessesRequest{
 		Processes: processes,
+		Auth:      auth,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)

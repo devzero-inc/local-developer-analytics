@@ -24,9 +24,27 @@ var (
 	}
 )
 
-func collect(_ *cobra.Command, _ []string) error {
+func init() {
+	includeShowFlagsForCollect(collectCmd)
+}
 
-	var err error
+func includeShowFlagsForCollect(cmd *cobra.Command) {
+	cmd.Flags().BoolP("auto-credentials", "a", false, "Try to automatically generate the credentails")
+	cmd.Flags().BoolP("workspace", "w", false, "Is collection executed in a DevZero workspace")
+}
+
+func collect(cmd *cobra.Command, _ []string) error {
+	autoCredentials, err := cmd.Flags().GetBool("auto-credentials")
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to get auto-credentials flag")
+		return errors.Wrap(err, "failed to get auto-credentials flag")
+	}
+
+	isWorkspace, err := cmd.Flags().GetBool("workspace")
+	if err != nil {
+		logging.Log.Error().Err(err).Msg("Failed to get workspace flag")
+		return errors.Wrap(err, "failed to get workspace flag")
+	}
 
 	user.Conf, err = user.GetConfig()
 	if err != nil {
@@ -64,11 +82,42 @@ func collect(_ *cobra.Command, _ []string) error {
 		return errors.Wrap(err, "failed to create process collector")
 	}
 
+	auth := collector.AuthConfig{
+		UserID:      config.AppConfig.UserID,
+		TeamID:      config.AppConfig.TeamID,
+		WorkspaceID: config.AppConfig.WorkspaceID,
+	}
+
+	if autoCredentials {
+		logging.Log.Debug().Msg("Auto-credentials flag is set to true")
+		if isWorkspace {
+			logging.Log.Debug().Msg("Workspace flag is set to true")
+			auth, err = user.ReadDZWorkspaceConfig()
+			if err != nil {
+				return errors.Wrap(err, "failed to read DevZero config")
+			}
+		} else {
+			logging.Log.Debug().Msg("Workspace flag is set to false")
+			path, err := user.GetStoragePath(config.OSType(user.Conf.Os), user.Conf.HomeDir)
+			logging.Log.Debug().Msgf("Storage path: %s", path)
+			if err != nil {
+				logging.Log.Error().Err(err).Msg("Failed to get storage path")
+				return errors.Wrap(err, "failed to get storage path")
+			}
+			auth, err = user.ReadDZCliConfig(path)
+			if err != nil {
+				return errors.Wrap(err, "failed to read DevZero config")
+			}
+		}
+		logging.Log.Debug().Msgf("Auth: %+v", auth)
+	}
+
 	collectorInstance := collector.NewCollector(
 		collector.SocketPath,
 		grpcClient,
 		logging.Log,
 		intervalConfig,
+		auth,
 		config.AppConfig.ExcludeRegex,
 		procCol,
 	)

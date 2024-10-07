@@ -8,6 +8,13 @@ option go_package = "lda/gen/api/v1;gen";
 option java_multiple_files = true;
 option java_package = "gen.api.v1";
 
+// Define a message representing an auth information about user and team.
+message Auth {
+  string user_id = 1; // Unique identifer for user that is processing the data
+  string team_id = 2; // Unique identifier for users team
+  optional string workspace_id = 3; // Unique identifier of the Workspace that is running the request
+}
+
 // Define a message representing a command, including its metadata and timing information.
 message Command {
   int64 id = 1; // Unique identifier for the command.
@@ -40,11 +47,13 @@ message Process {
 // Defines a request for sending a collection of commands.
 message SendCommandsRequest {
   repeated Command commands = 1; // A list of commands.
+  optional Auth auth = 2; // Optional auth configuration
 }
 
 // Defines a request for sending a collection of processes.
 message SendProcessesRequest {
   repeated Process processes = 1; // A list of processes.
+  optional Auth auth = 2; // Optional auth configuration
 }
 
 // Defines the service that provides RPC methods for sending command and process collections.

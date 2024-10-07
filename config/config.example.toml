@@ -45,17 +45,12 @@ debug = false
 # When enabled, process data will be collected not just locally but also from configured remote sources.
 # When this is enabled, 'server_host' and 'server_port' must be specified.
 # Default: false
-remote_collection = false
+remote_collection = true
 
 # The server host address for remote collection.
 # This is required when 'remote_collection' is enabled and specifies the remote server to connect to.
 # Default: (empty)
-# server_host = ""
-
-# The server port for remote collection.
-# Along with 'server_host', this defines the network address for the remote server.
-# Default: (empty)
-# server_port = ""
+server_host = "pulse.devzero.dev:443"
 
 # Regular expression pattern to exclude certain processes from being collected.
 # This can be used to omit sensitive or irrelevant processes from the data collection.
@@ -66,7 +61,7 @@ remote_collection = false
 # When enabled, data transmitted to and from the remote server will be encrypted.
 # Requires 'cert_file' to be specified if true.
 # Default: false
-# secure_connection = false
+secure_connection = true
 
 # Path to the certificate file used for establishing a secure connection.
 # This file should contain the SSL certificate when 'secure_connection' is enabled.
@@ -77,3 +72,15 @@ remote_collection = false
 # Options are 'ps' for basic process status information and 'psutil' for more detailed data, depending on system support.
 # Default: "ps"
 # process_collection_type = "ps"
+
+# Specifies the team identifier that will be used to mark the collection of data for that team
+# Default: (empty)
+# team_id = ""
+
+# Specifies the user identifier that will be used to make the collection of data for that user
+# Default: (empty)
+# user_id = ""
+
+# Specifies the user identifier that will be used to make the collection of data for that workspace
+# Default: (empty)
+# workspace_id = ""
