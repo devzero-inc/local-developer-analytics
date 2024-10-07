@@ -276,7 +276,6 @@ func install(cmd *cobra.Command, _ []string) error {
 	}
 
 	isWorkspace, err := cmd.Flags().GetBool("workspace")
-
 	if err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to get workspace flag")
 		return errors.Wrap(err, "failed to get workspace flag")
