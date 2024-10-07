@@ -25,13 +25,12 @@ var (
 )
 
 func init() {
-
 	includeShowFlagsForCollect(collectCmd)
 }
 
 func includeShowFlagsForCollect(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolP("auto-credentials", "a", false, "Try to automatically generate the credentails")
-	cmd.PersistentFlags().BoolP("workspace", "w", false, "Is collection executed in a DevZero workspace")
+	cmd.Flags().BoolP("auto-credentials", "a", false, "Try to automatically generate the credentails")
+	cmd.Flags().BoolP("workspace", "w", false, "Is collection executed in a DevZero workspace")
 }
 
 func collect(cmd *cobra.Command, _ []string) error {
@@ -90,13 +89,17 @@ func collect(cmd *cobra.Command, _ []string) error {
 	}
 
 	if autoCredentials {
+		logging.Log.Debug().Msg("Auto-credentials flag is set to true")
 		if isWorkspace {
+			logging.Log.Debug().Msg("Workspace flag is set to true")
 			auth, err = user.ReadDZWorkspaceConfig()
 			if err != nil {
 				return errors.Wrap(err, "failed to read DevZero config")
 			}
 		} else {
+			logging.Log.Debug().Msg("Workspace flag is set to false")
 			path, err := user.GetStoragePath(config.OSType(user.Conf.Os), user.Conf.HomeDir)
+			logging.Log.Debug().Msgf("Storage path: %s", path)
 			if err != nil {
 				logging.Log.Error().Err(err).Msg("Failed to get storage path")
 				return errors.Wrap(err, "failed to get storage path")
@@ -106,6 +109,7 @@ func collect(cmd *cobra.Command, _ []string) error {
 				return errors.Wrap(err, "failed to read DevZero config")
 			}
 		}
+		logging.Log.Debug().Msgf("Auth: %+v", auth)
 	}
 
 	collectorInstance := collector.NewCollector(
