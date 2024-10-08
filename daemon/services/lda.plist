@@ -17,8 +17,6 @@
     <string>{{.Username}}</string>
     <key>EnvironmentVariables</key>
         <dict>
-            <key>SHELL</key>
-            <string>{{.Shell}}</string>
             <key>HOME</key>
             <string>{{.Home}}</string>
         </dict>

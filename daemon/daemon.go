@@ -37,14 +37,14 @@ var templateFS embed.FS
 
 // Config is the configuration for the daemon service
 type Config struct {
-	ExePath        string
-	ShellLocation  string
-	HomeDir        string
-	Os             config.OSType
-	IsRoot         bool
-	SudoExecUser   *user.User
-	AutoCredential bool
-	IsWorkspace    bool
+	ExePath             string
+	HomeDir             string
+	Os                  config.OSType
+	IsRoot              bool
+	SudoExecUser        *user.User
+	AutoCredential      bool
+	IsWorkspace         bool
+	ShellTypeToLocation map[config.ShellType]string
 }
 
 // Daemon is the service that configures background service
@@ -79,7 +79,6 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 	var content bytes.Buffer
 	var tmpConf = map[string]interface{}{
 		"BinaryPath": d.config.ExePath,
-		"Shell":      d.config.ShellLocation,
 		"Home":       d.config.HomeDir,
 	}
 

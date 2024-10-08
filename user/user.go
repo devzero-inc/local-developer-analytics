@@ -40,10 +40,8 @@ type Config struct {
 	IsRoot bool `json:"is_root" db:"is_root"`
 	// ExePath is the path to the lda binary
 	ExePath string `json:"exe_path" db:"exe_path"`
-	// ShellType is the type of the shell
-	ShellType int64 `json:"shell_type" db:"shell_type"`
-	// ShellLocation is the location of the shell
-	ShellLocation string `json:"shell_location" db:"shell_location"`
+	// ShellTypeToLocation is a map of shell type to location
+	ShellTypeToLocation map[config.ShellType]string `json:"shell_type_to_location" db:"shell_type_to_location"`
 	// User is the user that executed the command (if sudo)
 	User *user.User `json:"-" db:"-"`
 }
@@ -63,12 +61,38 @@ func GetConfig() (*Config, error) {
 
 // InsertConfig inserts Config used to configure the system
 func InsertConfig(osConfig Config) error {
-	query := `INSERT INTO config (os, os_name, home_dir, lda_dir, is_root, exe_path, shell_type, shell_location) 
-			  VALUES (:os, :os_name, :home_dir, :lda_dir, :is_root, :exe_path, :shell_type, :shell_location)`
+	query := `INSERT INTO config (os, os_name, home_dir, lda_dir, is_root, exe_path) 
+			  VALUES (:os, :os_name, :home_dir, :lda_dir, :is_root, :exe_path)`
 
 	_, err := database.DB.NamedExec(query, osConfig)
+	if err != nil {
+		return err
+	}
 
-	return err
+	// drop all records in the table
+	_, err = database.DB.Exec("DELETE FROM shell_type_to_location")
+	if err != nil {
+		return err
+	}
+
+	// get the current config to retrieve the id
+	currCfg, err := GetConfig()
+	// should never really happen cuz the config was just inserted
+	if err != nil {
+		return err
+	}
+
+	// osConfig.ShellTypeToLocation is a map of shell type to location
+	// all the records need to get written to shell_type_to_location table
+	for shellType, location := range osConfig.ShellTypeToLocation {
+		// TODO this can be batched
+		_, err = database.DB.Exec("INSERT INTO shell_type_to_location (shell_type, shell_location, config_id) VALUES (?, ?, ?)", shellType, location, currCfg.Id)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // UpdateConfig updates an existing Config record in the database
@@ -80,18 +104,34 @@ func UpdateConfig(osConfig Config) error {
                 lda_dir = :lda_dir, 
                 is_root = :is_root, 
                 exe_path = :exe_path,
-                shell_type = :shell_type,
-                shell_location = :shell_location
               WHERE id = :id`
 
 	_, err := database.DB.NamedExec(query, osConfig)
+	if err != nil {
+		return err
+	}
+
+	// drop all records in the table
+	_, err = database.DB.Exec("DELETE FROM shell_type_to_location")
+	if err != nil {
+		return err
+	}
+
+	// osConfig.ShellTypeToLocation is a map of shell type to location
+	// all the records need to get written to shell_type_to_location table
+	for shellType, location := range osConfig.ShellTypeToLocation {
+		// TODO this can be batched
+		_, err = database.DB.Exec("INSERT INTO shell_type_to_location (shell_type, shell_location, config_id) VALUES (?, ?, ?)", shellType, location, osConfig.Id)
+		if err != nil {
+			return err
+		}
+	}
 
 	return err
 }
 
 // ConfigureUserSystemInfo configures the user system information and prompts the user to update the configuration if necessary.
 func ConfigureUserSystemInfo(currentConf *Config) {
-
 	// Retrieve the existing configuration from the database.
 	existingConf, err := GetConfig()
 	if err != nil && err != sql.ErrNoRows {
@@ -134,22 +174,24 @@ func ConfigureUserSystemInfo(currentConf *Config) {
 			}
 
 			if result == YesUpdate {
-				shellType, shellLocation, err := config.GetShell()
-				if err != nil {
-					logging.Log.Error().Err(err).Msg("Failed to setup shell")
-					os.Exit(1)
-				}
+				// if shell config is already set by however the binary was invoked, lets respect it
+				// if not, lets set it up
+				if len(currentConf.ShellTypeToLocation) == 0 {
+					shellTypeToLocation, err := config.GetShell()
+					if err != nil {
+						logging.Log.Error().Err(err).Msg("Failed to setup shell")
+						os.Exit(1)
+					}
+					currentConf.ShellTypeToLocation = shellTypeToLocation
 
-				currentConf.ShellType = int64(shellType)
-				currentConf.ShellLocation = shellLocation
-
-				currentConf.Id = existingConf.Id
-				if err := UpdateConfig(*currentConf); err != nil {
-					logging.Log.Error().Err(err).Msg("Failed to update configuration")
-					fmt.Fprintf(config.SysConfig.ErrOut, "Failed to update configuration: %s\n", err)
-					os.Exit(1)
+					currentConf.Id = existingConf.Id
+					if err := UpdateConfig(*currentConf); err != nil {
+						logging.Log.Error().Err(err).Msg("Failed to update configuration")
+						fmt.Fprintf(config.SysConfig.ErrOut, "Failed to update configuration: %s\n", err)
+						os.Exit(1)
+					}
+					logging.Log.Info().Msg("Configuration updated to current settings.")
 				}
-				logging.Log.Info().Msg("Configuration updated to current settings.")
 				Conf = currentConf
 			} else {
 				existingConf.User = currentConf.User
@@ -166,22 +208,20 @@ func ConfigureUserSystemInfo(currentConf *Config) {
 
 	logging.Log.Debug().Msg("No config found, creating new one")
 
-	shellType, shellLocation, err := config.GetShell()
-	if err != nil {
-		logging.Log.Error().Err(err).Msg("Failed to setup shell")
-		os.Exit(1)
+	if len(currentConf.ShellTypeToLocation) == 0 {
+		shellTypeToLocation, err := config.GetShell()
+		if err != nil {
+			logging.Log.Error().Err(err).Msg("Failed to setup shell")
+			os.Exit(1)
+		}
+		currentConf.ShellTypeToLocation = shellTypeToLocation
 	}
-
-	currentConf.ShellType = int64(shellType)
-	currentConf.ShellLocation = shellLocation
-
 	logging.Log.Debug().Msgf("Shell config: %+v", currentConf)
 
 	if err := InsertConfig(*currentConf); err != nil {
 		fmt.Fprintf(config.SysConfig.ErrOut, "Failed to insert os config: %s\n", err)
 		os.Exit(1)
 	}
-
 	logging.Log.Debug().Msg("Config inserted")
 
 	Conf = currentConf

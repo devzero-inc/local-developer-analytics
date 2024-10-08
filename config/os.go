@@ -12,6 +12,24 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
+var (
+	SupportedShells = []string{"/bin/bash", "/bin/zsh", "/bin/fish"}
+)
+
+func GetShellType(shellLocation string) ShellType {
+	shellType := path.Base(shellLocation)
+	switch shellType {
+	case "bash":
+		return Bash
+	case "zsh":
+		return Zsh
+	case "fish":
+		return Fish
+	default:
+		return -1
+	}
+}
+
 // ShellType is the type of the shell that is supported
 type ShellType int
 
@@ -100,44 +118,30 @@ func GetLdaBinaryPath() (string, error) {
 }
 
 // GetShell sets the current active shell and location
-func GetShell() (ShellType, string, error) {
-
+func GetShell() (map[ShellType]string, error) {
 	shellLocation := os.Getenv("SHELL")
-
 	return configureShell(shellLocation)
 }
 
-func configureShell(shellLocation string) (ShellType, string, error) {
-	shellType := path.Base(shellLocation)
-
-	var shell ShellType
-	switch shellType {
-	case "bash":
-		shell = Bash
-	case "zsh":
-		shell = Zsh
-	case "fish":
-		shell = Fish
-		// TODO: consider supporting "sh" and "ash" as well.
-	default:
+func configureShell(shellLocation string) (map[ShellType]string, error) {
+	shellTypeToLocation := make(map[ShellType]string)
+	shell := GetShellType(shellLocation)
+	if shell < 0 {
 		shellLocation, err := promptForShellType()
 		if err != nil {
-			return -1, "", err
+			return shellTypeToLocation, err
 		}
 		return configureShell(shellLocation)
 	}
-
-	return shell, shellLocation, nil
+	shellTypeToLocation[shell] = shellLocation
+	return shellTypeToLocation, nil
 }
 
 // promptForShellPath prompts the user to confirm the detected shell path or input a new one.
 func promptForShellType() (string, error) {
-
-	supportedShells := []string{"/bin/bash", "/bin/zsh", "/bin/fish"}
-
 	prompt := promptui.Select{
 		Label: "We detected an unsupported shell, often this could happen because the script was run as sudo. Currently, we support the following shells. Please select one:",
-		Items: supportedShells,
+		Items: SupportedShells,
 	}
 
 	_, result, err := prompt.Run()

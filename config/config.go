@@ -78,7 +78,6 @@ func SetupSysConfig() {
 
 // SetupConfig initialize the configuration instance
 func SetupConfig(ldaDir string, user *user.User) {
-
 	configPath := filepath.Join(ldaDir, "config.toml")
 
 	if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
