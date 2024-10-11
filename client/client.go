@@ -9,8 +9,10 @@ import (
 
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 )
 
 // Config holds configuration for the client connection.
@@ -26,19 +28,37 @@ type Client struct {
 	conn    *grpc.ClientConn
 	logger  *zerolog.Logger
 	timeout time.Duration
+	config  Config
 }
 
-// NewClient creates a new client and returns a pointer to it and an error
+// NewClient creates a new client with connection management and returns a pointer to it and an error
 func NewClient(config Config) (*Client, error) {
+	client := &Client{
+		logger:  &logging.Log,
+		timeout: time.Duration(config.Timeout) * time.Second,
+		config:  config,
+	}
+
+	// Establish the initial connection
+	err := client.connect()
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+// connect handles connection establishment and configuration
+func (c *Client) connect() error {
 	var opts []grpc.DialOption
 
 	// Setup connection security based on config
 	creds := grpc.WithTransportCredentials(insecure.NewCredentials())
-	if config.SecureConnection {
-		if config.CertFile != "" {
-			tlsFromFile, err := credentials.NewClientTLSFromFile(config.CertFile, "")
+	if c.config.SecureConnection {
+		if c.config.CertFile != "" {
+			tlsFromFile, err := credentials.NewClientTLSFromFile(c.config.CertFile, "")
 			if err != nil {
-				return nil, fmt.Errorf("failed to create TLS credentials: %w", err)
+				return fmt.Errorf("failed to create TLS credentials: %w", err)
 			}
 			creds = grpc.WithTransportCredentials(tlsFromFile)
 		} else {
@@ -47,27 +67,48 @@ func NewClient(config Config) (*Client, error) {
 	}
 	opts = append(opts, creds)
 
-	conn, err := grpc.Dial(config.Address, opts...)
+	// Adding keepalive parameters to manage connection health
+	keepAliveParams := grpc.WithKeepaliveParams(keepalive.ClientParameters{
+		Time:                10 * time.Second, // Ping the server every 10 seconds to keep the connection alive
+		Timeout:             5 * time.Second,  // Wait 5 seconds for a pong before closing the connection
+		PermitWithoutStream: true,             // Send pings even without active RPCs
+	})
+	opts = append(opts, keepAliveParams)
+
+	// Dial the server
+	conn, err := grpc.Dial(c.config.Address, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to server: %w", err)
+		return fmt.Errorf("failed to connect to server: %w", err)
 	}
 
-	// Set a default timeout of 60 seconds if not provided
-	if config.Timeout == 0 {
-		config.Timeout = 60
-	}
+	// Set the connection on the client
+	c.conn = conn
+	return nil
+}
 
-	client := &Client{
-		conn:    conn,
-		logger:  &logging.Log,
-		timeout: time.Duration(config.Timeout) * time.Second,
+// Reconnect attempts to reconnect if the connection is down
+func (c *Client) Reconnect() error {
+	if c.conn != nil {
+		c.Close()
 	}
+	return c.connect()
+}
 
-	return client, nil
+// CheckAndReconnect checks connection health and reconnects if necessary
+func (c *Client) CheckAndReconnect() error {
+	if c.conn.GetState() == connectivity.TransientFailure || c.conn.GetState() == connectivity.Shutdown {
+		c.logger.Warn().Msg("Connection lost. Attempting to reconnect...")
+		return c.Reconnect()
+	}
+	return nil
 }
 
 // SendCommands sends a list of commands to the server
 func (c *Client) SendCommands(commands []*gen.Command, auth *gen.Auth) error {
+
+	if err := c.CheckAndReconnect(); err != nil {
+		return fmt.Errorf("failed to reconnect: %w", err)
+	}
 
 	client := gen.NewCollectorServiceClient(c.conn)
 
@@ -89,6 +130,10 @@ func (c *Client) SendCommands(commands []*gen.Command, auth *gen.Auth) error {
 
 // SendProcesses sends a list of processes to the server
 func (c *Client) SendProcesses(processes []*gen.Process, auth *gen.Auth) error {
+
+	if err := c.CheckAndReconnect(); err != nil {
+		return fmt.Errorf("failed to reconnect: %w", err)
+	}
 
 	client := gen.NewCollectorServiceClient(c.conn)
 

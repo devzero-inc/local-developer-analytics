@@ -81,6 +81,10 @@ secure_connection = true
 # Default: (empty)
 # user_id = ""
 
+# Specifies the user identifier that will be used to make the collection of data for that user
+# Default: (empty)
+# user_email = ""
+
 # Specifies the user identifier that will be used to make the collection of data for that workspace
 # Default: (empty)
 # workspace_id = ""

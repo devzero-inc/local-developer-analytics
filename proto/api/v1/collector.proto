@@ -13,6 +13,7 @@ message Auth {
   string user_id = 1; // Unique identifer for user that is processing the data
   string team_id = 2; // Unique identifier for users team
   optional string workspace_id = 3; // Unique identifier of the Workspace that is running the request
+  string user_email = 4; // Unique identifier of user that is processing the data
 }
 
 // Define a message representing a command, including its metadata and timing information.
