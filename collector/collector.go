@@ -88,6 +88,7 @@ func NewCollector(socketPath string, client *client.Client, logger zerolog.Logge
 			UserId:      auth.UserID,
 			TeamId:      auth.TeamID,
 			WorkspaceId: &auth.WorkspaceID,
+			UserEmail:   auth.UserEmail,
 		}
 	}
 
