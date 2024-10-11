@@ -46,6 +46,7 @@ type AuthConfig struct {
 	TeamID      string
 	UserID      string
 	WorkspaceID string
+	UserEmail   string
 }
 
 // collectionConfig contains the configuration for the collection process

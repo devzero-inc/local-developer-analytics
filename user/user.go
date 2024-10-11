@@ -275,9 +275,11 @@ func ReadDZWorkspaceConfig() (collector.AuthConfig, error) {
 		devzeroTeamFile      = "DEVZERO_TEAM_ID"
 		devzeroUserFile      = "DEVZERO_USER_ID"
 		devzeroWorkspaceFile = "DEVZERO_WORKSPACE_ID"
+		devzeroEmailFile     = "DEVZERO_WORKSPACE_OWNER_EMAIL"
 	)
 
 	userId := ""
+	userEmail := ""
 	teamId := ""
 	workspaceId := ""
 
@@ -297,6 +299,14 @@ func ReadDZWorkspaceConfig() (collector.AuthConfig, error) {
 		}
 	}
 
+	emailPath := filepath.Join(devzeroConfigPath, devzeroEmailFile)
+	if util.FileExists(emailPath) {
+		data, err := os.ReadFile(emailPath)
+		if err == nil && len(data) > 0 {
+			userEmail = string(data)
+		}
+	}
+
 	workspacePath := filepath.Join(devzeroConfigPath, devzeroWorkspaceFile)
 	if util.FileExists(workspacePath) {
 		data, err := os.ReadFile(workspacePath)
@@ -309,18 +319,21 @@ func ReadDZWorkspaceConfig() (collector.AuthConfig, error) {
 		UserID:      userId,
 		TeamID:      teamId,
 		WorkspaceID: workspaceId,
+		UserEmail:   userEmail,
 	}, nil
 }
 
 // ReadDZCliConfig reads the DevZero workspace configuration
 func ReadDZCliConfig(path string) (collector.AuthConfig, error) {
 	const (
-		localUserFile = "user_id.txt"
-		localTeamFile = "team_id.txt"
+		localUserFile  = "user_id.txt"
+		localTeamFile  = "team_id.txt"
+		localEmailFile = "user_email.txt"
 	)
 
 	userId := ""
 	teamId := ""
+	userEmail := ""
 
 	localUserPath := filepath.Join(path, localUserFile)
 	if util.FileExists(localUserPath) {
@@ -338,8 +351,17 @@ func ReadDZCliConfig(path string) (collector.AuthConfig, error) {
 		}
 	}
 
+	localEmailPath := filepath.Join(path, localEmailFile)
+	if util.FileExists(localEmailPath) {
+		data, err := os.ReadFile(localEmailPath)
+		if err == nil && len(data) > 0 {
+			userEmail = string(data)
+		}
+	}
+
 	return collector.AuthConfig{
-		UserID: userId,
-		TeamID: teamId,
+		UserID:    userId,
+		TeamID:    teamId,
+		UserEmail: userEmail,
 	}, nil
 }

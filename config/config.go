@@ -44,6 +44,8 @@ type Config struct {
 	TeamID string `mapstructure:"team_id"`
 	// UserID is the user identifier for the workspace
 	UserID string `mapstructure:"user_id"`
+	// UserEmail is the user identifier for the workspace
+	UserEmail string `mapstructure:"user_email"`
 	// WorkspaceID is the workspace identifier
 	WorkspaceID string `mapstructure:"workspace_id"`
 }

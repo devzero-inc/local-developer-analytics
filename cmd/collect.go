@@ -86,6 +86,7 @@ func collect(cmd *cobra.Command, _ []string) error {
 		UserID:      config.AppConfig.UserID,
 		TeamID:      config.AppConfig.TeamID,
 		WorkspaceID: config.AppConfig.WorkspaceID,
+		UserEmail:   config.AppConfig.UserEmail,
 	}
 
 	if autoCredentials {
