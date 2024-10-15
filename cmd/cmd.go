@@ -78,7 +78,8 @@ var (
 )
 
 var installFlags struct {
-	shells []string
+	shells         []string
+	nonInteractive bool
 }
 
 func newInstallCmd() *cobra.Command {
@@ -90,6 +91,8 @@ func newInstallCmd() *cobra.Command {
 	}
 
 	installCmd.Flags().StringSliceVarP(&installFlags.shells, "shell", "s", []string{}, fmt.Sprintf("Shells to instrument %+v; --shell=all for all shells", config.SupportedShells))
+
+	installCmd.Flags().BoolVarP(&installFlags.nonInteractive, "non-interactive", "n", false, "Run installation in non-interactive mode")
 
 	return installCmd
 }
@@ -354,7 +357,7 @@ func install(cmd *cobra.Command, _ []string) error {
 			return errors.Wrap(err, "failed to install LDA shell configuration files")
 		}
 
-		if err := shl.InjectShellSource(); err != nil {
+		if err := shl.InjectShellSource(installFlags.nonInteractive); err != nil {
 			logging.Log.Error().Err(err).Msgf("Failed to inject shell source (%s); will reattempt at `start` time", shellLocation)
 		}
 	}

@@ -158,7 +158,7 @@ func (s *Shell) DeleteShellConfiguration() error {
 }
 
 // InjectShellSource injects the shell source
-func (s *Shell) InjectShellSource() error {
+func (s *Shell) InjectShellSource(nonInteractive bool) error {
 	s.logger.Info().Msg("Installing shell source")
 
 	var shellConfigFile string
@@ -175,11 +175,7 @@ func (s *Shell) InjectShellSource() error {
 	}
 
 	if s.Config.IsRoot {
-		autoupdate := os.Getenv("LDA_AUTO_UPDATE_CONFIG")
-		// if user has set autoupdate in the env var, lets stick to installing in the default path for that shell
-		// so this logic will not prompt the user for shell info if autoupdate is set
-		// TODO support all shells for auto-update mechanisms
-		if !strings.EqualFold(autoupdate, "true") {
+		if !nonInteractive {
 			conf, err := promptForShellPath(shellConfigFile)
 			if err != nil {
 				return err
