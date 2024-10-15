@@ -103,7 +103,7 @@ func UpdateConfig(osConfig Config) error {
                 home_dir = :home_dir, 
                 lda_dir = :lda_dir, 
                 is_root = :is_root, 
-                exe_path = :exe_path,
+                exe_path = :exe_path
               WHERE id = :id`
 
 	_, err := database.DB.NamedExec(query, osConfig)
