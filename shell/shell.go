@@ -25,27 +25,35 @@ const (
 )
 
 var (
+	// TODO: Seems like we could combine this somehow so we don't have to repeat the same information
+
 	templateSources = map[config.ShellType]string{
 		config.Zsh:  "scripts/zsh.sh",
 		config.Bash: "scripts/bash.sh",
 		config.Fish: "scripts/fish.sh",
 	}
 
+	shellScriptName = map[config.ShellType]string{
+		config.Zsh:  "zsh.sh",
+		config.Bash: "bash.sh",
+		config.Fish: "fish.sh",
+	}
+
 	sourceScripts = map[config.ShellType]string{
 		config.Zsh: `
 # LDA shell source
-if [ -f "$HOME/.lda/lda.sh" ]; then
-    source "$HOME/.lda/lda.sh"
+if [ -f "$HOME/.lda/zsh.sh" ]; then
+    source "$HOME/.lda/zsh.sh"
 fi`,
 		config.Bash: `
 # LDA shell source
-if [ -f "$HOME/.lda/lda.sh" ]; then
-    source "$HOME/.lda/lda.sh"
+if [ -f "$HOME/.lda/bash.sh" ]; then
+    source "$HOME/.lda/bash.sh"
 fi`,
 		config.Fish: `
 # LDA shell source
-if test -f "$HOME/.lda/lda.sh"
-    source "$HOME/.lda/lda.sh"
+if test -f "$HOME/.lda/fish.sh"
+    source "$HOME/.lda/fish.sh"
 end`,
 	}
 
@@ -83,7 +91,7 @@ func NewShell(config *Config, logger zerolog.Logger) (*Shell, error) {
 // InstallShellConfiguration installs the shell configuration
 func (s *Shell) InstallShellConfiguration() error {
 
-	filePath := filepath.Join(s.Config.LdaDir, ldaScript)
+	filePath := filepath.Join(s.Config.LdaDir, shellScriptName[s.Config.ShellType])
 
 	collectorFilePath := filepath.Join(s.Config.LdaDir, CollectorName)
 
