@@ -37,6 +37,7 @@ func createProcessesTable() {
 		CREATE TABLE IF NOT EXISTS processes (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			pid INTEGER NOT NULL,
+			ppid INTEGER,
 			name TEXT NOT NULL,
 			status TEXT,
 			created_time INTEGER,
@@ -69,7 +70,10 @@ func createCommandsTable() {
 			directory TEXT,
 			execution_time INTEGER,
 			start_time INTEGER,
-			end_time INTEGER 
+			end_time INTEGER,
+			status TEXT,
+			result TEXT,
+			repository TEXT
 		);`
 
 		_, err := DB.Exec(createCommandsTableSQL)

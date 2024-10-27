@@ -7,6 +7,8 @@
 # $3 - Working directory
 # $4 - User who executed the command
 # $5 - Unique identifier
+# $6 - Command result (success/failure)
+# $7 - Exit status
 
 # UNIX socket path
 SOCKET_PATH="{{.SocketPath}}"
@@ -43,8 +45,8 @@ send_via_perl() {
     close(\$sock);" 2>/dev/null
 }
 
-# Construct the log message
-LOG_MESSAGE="$1|$2|$3|$4|$5"
+# Construct the log message including result and exit status
+LOG_MESSAGE="$1|$2|$3|$4|$5|$6|$7"
 
 # Send the log message to the Go application via UNIX socket
 if command_exists nc && nc_supports_U; then
@@ -56,7 +58,7 @@ elif command_exists python; then
 elif command_exists perl; then
   send_via_perl
 else
-  # TODO: Implement direct command sending
-  echo "Neither nc, socat, python or perl are available on this system."
+  # Output error if no suitable command is available
+  echo "Neither nc, socat, python or perl are available on this system." >&2
   exit 1
 fi

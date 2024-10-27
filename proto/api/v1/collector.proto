@@ -26,6 +26,9 @@ message Command {
   int64 execution_time = 6; // Execution time of the command in milliseconds.
   int64 start_time = 7; // Start time of the command execution (Unix timestamp).
   int64 end_time = 8; // End time of the command execution (Unix timestamp).
+  string result = 9; // Result of executed command => success/failure
+  string status = 10; // Status of executed command 
+  string repository = 11; // Repository is repository where commands are executed
 }
 
 // Define a message representing a process, including its metadata and resource usage.
@@ -41,6 +44,7 @@ message Process {
   string platform_family = 9; // More detailed platform family information.
   double cpu_usage = 10; // CPU usage percentage by the process.
   double memory_usage = 11; // Memory usage by the process in megabytes.
+  int64 ppid = 12; // Parent process ID.
 }
 
 // Requests to send collections of commands and processes.

@@ -10,6 +10,13 @@ preexec() {
 }
 
 precmd() {
-  # Send an end execution message
-  {{.CommandScriptPath}} "end" "$LAST_COMMAND" "$PWD" "$USER" "$UUID"
+  local exit_status=$?
+  local result="success"
+  
+  if [[ $exit_status -ne 0 ]]; then
+    result="failure"
+  fi
+  
+  # Send an end execution message with result and exit status
+  {{.CommandScriptPath}} "end" "$LAST_COMMAND" "$PWD" "$USER" "$UUID" "$result" "$exit_status"
 }

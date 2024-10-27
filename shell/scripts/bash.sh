@@ -3,7 +3,6 @@ generate_uuid() {
 }
 
 preexec_invoke_exec() {
-# Mimic preexec functionality using DEBUG trap
     # Avoid running preexec_invoke_exec for PROMPT_COMMAND
     if [[ "$BASH_COMMAND" != "$PROMPT_COMMAND" ]]; then
         export UUID=$(generate_uuid)
@@ -14,12 +13,18 @@ preexec_invoke_exec() {
 }
 trap 'preexec_invoke_exec' DEBUG
 
-# Mimic precmd functionality using PROMPT_COMMAND
 precmd_invoke_cmd() {
-    # Send an end execution message
-    {{.CommandScriptPath}} "end" "$LAST_COMMAND" "$PWD" "$USER" "$UUID"
+    local exit_status=$?
+    local result="success"
+
+    if [[ $exit_status -ne 0 ]]; then
+        result="failure"
+    fi
+
+    # Send an end execution message with the result and exit status
+    {{.CommandScriptPath}} "end" "$LAST_COMMAND" "$PWD" "$USER" "$UUID" "$result" "$exit_status"
 }
 
 # Update PROMPT_COMMAND to invoke precmd_invoke_cmd
-# Append precmd_invoke_cmd to existing PROMPT_COMMAND to preserve other functionalities
+# Append precmd_invoke_cmd to PROMPT_COMMAND to run after each command
 PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }precmd_invoke_cmd"

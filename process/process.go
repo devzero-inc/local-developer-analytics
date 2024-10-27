@@ -48,6 +48,7 @@ func (f *Factory) Create(pType string) (SystemProcess, error) {
 type Process struct {
 	Id   int64  `json:"id" db:"id"`
 	PID  int64  `json:"pid" db:"pid"`
+	PPID int64  `json:"ppid" db:"ppid"`
 	Name string `json:"name" db:"name"`
 	// R: Running; S: Sleep; T: Stop; I: Idle; Z: Zombie; W: Wait; L: Lock;
 	Status         string  `json:"status" db:"status"`
@@ -136,8 +137,8 @@ func DeleteProcessesByDays(days int) error {
 
 // InsertProcesses inserts multiple processes into the database in bulk
 func InsertProcesses(processes []Process) error {
-	query := `INSERT INTO processes (pid, name, status, created_time, stored_time, os, platform, platform_family, cpu_usage, memory_usage)
-    VALUES (:pid, :name, :status, :created_time, :stored_time, :os, :platform, :platform_family, :cpu_usage, :memory_usage)`
+	query := `INSERT INTO processes (pid, name, status, created_time, stored_time, os, platform, platform_family, cpu_usage, memory_usage, ppid)
+	VALUES (:pid, :name, :status, :created_time, :stored_time, :os, :platform, :platform_family, :cpu_usage, :memory_usage, :ppid)`
 
 	// Begin a transaction
 	tx, err := database.DB.Beginx()
@@ -170,6 +171,7 @@ func MapProcessToProto(process Process) *gen.Process {
 	return &gen.Process{
 		Id:             process.Id,
 		Pid:            process.PID,
+		Ppid:           process.PPID,
 		Name:           process.Name,
 		Status:         process.Status,
 		CreatedTime:    process.CreatedTime,
