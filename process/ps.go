@@ -29,7 +29,8 @@ func NewPs(logger zerolog.Logger) *Ps {
 func (p *Ps) Collect() ([]Process, error) {
 	p.logger.Debug().Msg("Collecting process")
 
-	cmd := exec.Command("ps", "axo", "pid,pcpu,pmem,lstart,comm")
+	// Adjust the command to include PPID
+	cmd := exec.Command("ps", "axo", "pid,ppid,pcpu,pmem,lstart,comm")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -39,20 +40,22 @@ func (p *Ps) Collect() ([]Process, error) {
 	}
 
 	scanner := bufio.NewScanner(&out)
-	scanner.Scan() // Skipping the header line
+	scanner.Scan() // Skip the header line
 
 	var processInfo []Process
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		fields := strings.Fields(line)
 
-		// Parsing the first three fields as PID, CPU and MEM
+		// Parse PID, PPID, CPU and MEM usage
 		pid, _ := strconv.ParseInt(fields[0], 10, 64)
-		cpuUsage, _ := strconv.ParseFloat(fields[1], 64)
-		memUsage, _ := strconv.ParseFloat(fields[2], 64)
+		ppid, _ := strconv.ParseInt(fields[1], 10, 64)
+		cpuUsage, _ := strconv.ParseFloat(fields[2], 64)
+		memUsage, _ := strconv.ParseFloat(fields[3], 64)
 
-		// Reconstruct lstart from fields 3 to 7
-		lstart := strings.Join(fields[3:8], " ")
+		// Parse the start time
+		lstart := strings.Join(fields[4:9], " ")
 		const lstartLayout = "Mon Jan 2 15:04:05 2006"
 		startTime, err := time.Parse(lstartLayout, lstart)
 		if err != nil {
@@ -60,12 +63,13 @@ func (p *Ps) Collect() ([]Process, error) {
 			continue
 		}
 
-		// The command name is the rest, starting from field 8
-		// This assumes that the command name is the last field and can contain spaces
-		name := strings.Join(fields[8:], " ")
+		// Command name might contain spaces, so we join remaining fields
+		name := strings.Join(fields[9:], " ")
 
-		processInfo = append(processInfo, Process{
+		// Create the Process instance
+		process := Process{
 			PID:         pid,
+			PPID:        ppid,
 			Name:        path.Base(name),
 			CPUUsage:    cpuUsage,
 			MemoryUsage: memUsage,
@@ -73,7 +77,10 @@ func (p *Ps) Collect() ([]Process, error) {
 			StoredTime:  time.Now().UnixMilli(),
 			OS:          runtime.GOOS,
 			Platform:    runtime.GOOS,
-		})
+		}
+
+		// Append to the list of processes
+		processInfo = append(processInfo, process)
 	}
 
 	if err := scanner.Err(); err != nil {

@@ -2,9 +2,11 @@ package util
 
 import (
 	"bufio"
+	"fmt"
 	"lda/logging"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -121,4 +123,47 @@ func AppendToFile(filePath, content string) error {
 		return err
 	}
 	return nil
+}
+
+// GetRepoNameFromConfig reads the .git/config file and extracts the repository name
+func GetRepoNameFromConfig(path string) (string, error) {
+
+	gitPath := filepath.Join(path, ".git")
+	info, err := os.Stat(gitPath)
+	if err != nil && !info.IsDir() {
+		return "", fmt.Errorf("could not find .git directory: %w", err)
+	}
+
+	configPath := filepath.Join(gitPath, "config")
+	file, err := Fs.Open(configPath)
+	if err != nil {
+		return "", fmt.Errorf("could not open .git/config: %w", err)
+	}
+	defer file.Close()
+
+	var url string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Look for the URL in the origin section
+		if strings.HasPrefix(line, "url =") {
+			url = strings.TrimSpace(strings.TrimPrefix(line, "url ="))
+			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("error reading .git/config: %w", err)
+	}
+
+	if url == "" {
+		return "", fmt.Errorf("no origin URL found in .git/config")
+	}
+
+	url = strings.TrimSuffix(url, ".git") // Remove .git suffix if present
+	parts := strings.Split(url, "/")
+
+	// Extract repo name from URL
+	return parts[len(parts)-1], nil
 }

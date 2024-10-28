@@ -19,6 +19,9 @@ type Command struct {
 	ExecutionTime int64  `json:"execution_time" db:"execution_time"`
 	StartTime     int64  `json:"start_time" db:"start_time"`
 	EndTime       int64  `json:"end_time" db:"end_time"`
+	Status        string `json:"status" db:"status"`
+	Result        string `json:"result" db:"result"`
+	Repository    string `json:"repository" db:"repository"`
 }
 
 // GetCommandById fetches a command by its ID
@@ -87,8 +90,8 @@ func DeleteCommandsByDays(days int) error {
 
 // InsertCommand inserts a command into the database
 func InsertCommand(command Command) error {
-	query := `INSERT INTO commands (category, command, user, directory, execution_time, start_time, end_time)
-	VALUES (:category, :command, :user, :directory, :execution_time, :start_time, :end_time)`
+	query := `INSERT INTO commands (category, command, user, directory, execution_time, start_time, end_time, status, result, repository)
+	VALUES (:category, :command, :user, :directory, :execution_time, :start_time, :end_time, :status, :result, :repository)`
 
 	_, err := database.DB.NamedExec(query, command)
 
@@ -132,5 +135,8 @@ func MapCommandToProto(command Command) *gen.Command {
 		ExecutionTime: command.ExecutionTime,
 		StartTime:     command.StartTime,
 		EndTime:       command.EndTime,
+		Status:        command.Status,
+		Result:        command.Result,
+		Repository:    command.Repository,
 	}
 }

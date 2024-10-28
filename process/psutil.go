@@ -65,8 +65,14 @@ func (p *Psutil) Collect() ([]Process, error) {
 			continue
 		}
 
+		ppid, err := proc.Ppid()
+		if err != nil {
+			p.logger.Err(err).Msg("Error retrieving parent PID")
+		}
+
 		processInfo = append(processInfo, Process{
 			PID:            int64(proc.Pid),
+			PPID:           int64(ppid),
 			Name:           name,
 			Status:         status,
 			CreatedTime:    createTime,

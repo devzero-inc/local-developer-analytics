@@ -286,7 +286,7 @@ func (c *Collector) handleSocketCollection(con net.Conn) error {
 
 	c.logger.Debug().Msgf("Received: %s", string(buf[:n]))
 
-	if len(parts) != 5 {
+	if len(parts) != 7 {
 		c.logger.Error().Msg("Invalid command format")
 		return fmt.Errorf("invalid command format")
 	}
@@ -315,12 +315,18 @@ func (c *Collector) handleStartCommand(parts []string) error {
 
 	c.logger.Debug().Msgf("Parsing command: %s", parts[0])
 
+	repo, err := util.GetRepoNameFromConfig(parts[2])
+	if err != nil {
+		c.logger.Error().Err(err).Msg("Failed to get repository name")
+	}
+
 	command := Command{
-		Category:  ParseCommand(parts[1]),
-		Command:   parts[1],
-		Directory: parts[2],
-		User:      parts[3],
-		StartTime: time.Now().UnixMilli(), // TODO: there are some issues with sending time through shell because of ms support on MAC, explore more
+		Category:   ParseCommand(parts[1]),
+		Command:    parts[1],
+		Directory:  parts[2],
+		User:       parts[3],
+		StartTime:  time.Now().UnixMilli(), // TODO: there are some issues with sending time through shell because of ms support on MAC, explore more
+		Repository: repo,
 	}
 
 	c.collectionConfig.ongoingCommands[parts[4]] = command
@@ -342,7 +348,10 @@ func (c *Collector) handleEndCommand(parts []string) error {
 	if command, exists := c.collectionConfig.ongoingCommands[parts[4]]; exists {
 		command.EndTime = time.Now().UnixMilli()
 		command.ExecutionTime = command.EndTime - command.StartTime
+		command.Result = parts[5]
+		command.Status = parts[6]
 
+		c.logger.Debug().Msgf("Command: %+v", command)
 		if err := InsertCommand(command); err != nil {
 			c.logger.Error().Err(err).Msg("Failed to insert command")
 			return err
