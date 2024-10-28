@@ -130,7 +130,7 @@ func GetRepoNameFromConfig(path string) (string, error) {
 
 	gitPath := filepath.Join(path, ".git")
 	info, err := os.Stat(gitPath)
-	if err != nil && !info.IsDir() {
+	if err != nil && info != nil && !info.IsDir() {
 		return "", fmt.Errorf("could not find .git directory: %w", err)
 	}
 
