@@ -348,6 +348,7 @@ func install(cmd *cobra.Command, _ []string) error {
 		AutoCredential:      autoCredentials,
 		IsWorkspace:         isWorkspace,
 		ShellTypeToLocation: user.Conf.ShellTypeToLocation,
+		BaseCommandPath:     cmd.CommandPath(),
 	}
 	dmn := daemon.NewDaemon(daemonConf, logging.Log)
 

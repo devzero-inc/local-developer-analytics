@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	"github.com/devzero-inc/local-developer-analytics/config"
 	"github.com/devzero-inc/local-developer-analytics/util"
@@ -46,6 +47,7 @@ type Config struct {
 	AutoCredential      bool
 	IsWorkspace         bool
 	ShellTypeToLocation map[config.ShellType]string
+	BaseCommandPath     string
 }
 
 // Daemon is the service that configures background service
@@ -93,8 +95,28 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 		tmpConf["Group"] = group.Name
 	}
 
+	commands := strings.Split(d.config.BaseCommandPath, " ")
+
+	basePath := BaseCollectCommand
+
+	if len(commands) > 0 && commands[0] != "lda" {
+
+		var path string
+		for _, command := range commands {
+			d.logger.Debug().Msgf("Checking command path: %s", command)
+			if command == "lda" {
+				break
+			}
+			path = path + command + " "
+		}
+
+		basePath = path + basePath
+	}
+
+	d.logger.Info().Msgf("Base path: %s", basePath)
+
 	collectCmd := []string{
-		BaseCollectCommand,
+		basePath,
 	}
 	if d.config.AutoCredential {
 		collectCmd = append(collectCmd, "-a")
