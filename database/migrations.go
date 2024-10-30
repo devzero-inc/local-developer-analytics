@@ -2,8 +2,9 @@ package database
 
 import (
 	"fmt"
-	"lda/config"
 	"os"
+
+	"github.com/devzero-inc/local-developer-analytics/config"
 )
 
 // RunMigrations all additional migrations should be registered here

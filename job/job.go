@@ -1,9 +1,10 @@
 package job
 
 import (
-	"lda/collector"
-	"lda/process"
 	"time"
+
+	"github.com/devzero-inc/local-developer-analytics/collector"
+	"github.com/devzero-inc/local-developer-analytics/process"
 )
 
 // Cleanup job that will run in background and every 'hours' try to run the ticker

@@ -1,4 +1,4 @@
-module lda
+module github.com/devzero-inc/local-developer-analytics
 
 go 1.21.4
 

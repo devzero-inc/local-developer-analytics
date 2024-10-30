@@ -3,12 +3,13 @@ package util
 import (
 	"bufio"
 	"fmt"
-	"lda/logging"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/devzero-inc/local-developer-analytics/logging"
 )
 
 // FileExists checks if a file exists or not

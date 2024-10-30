@@ -2,11 +2,12 @@ package database
 
 import (
 	"fmt"
-	"lda/config"
-	"lda/util"
 	"os"
 	"os/user"
 	"path/filepath"
+
+	"github.com/devzero-inc/local-developer-analytics/config"
+	"github.com/devzero-inc/local-developer-analytics/util"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
