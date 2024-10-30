@@ -25,7 +25,8 @@ var (
 	// Verbose Define verbose flag variables
 	Verbose bool
 
-	ldaCmd = &cobra.Command{
+	// LdaCmd is the main command for the LDA project
+	LdaCmd = &cobra.Command{
 		Use:   "lda",
 		Short: "Command line manager for LDA project.",
 		Long: `Command line manager for LDA Project.
@@ -107,21 +108,21 @@ const (
 
 func init() {
 
-	includeShowFlagsForLda(ldaCmd)
+	includeShowFlagsForLda(LdaCmd)
 	includeShowFlagsForServe(serveCmd)
 	includeShowFlagsForInstall(installCmd)
 
 	cobra.OnInitialize(setupConfig)
 
-	ldaCmd.AddCommand(versionCmd)
-	ldaCmd.AddCommand(collectCmd)
-	ldaCmd.AddCommand(startCmd)
-	ldaCmd.AddCommand(stopCmd)
-	ldaCmd.AddCommand(installCmd)
-	ldaCmd.AddCommand(uninstallCmd)
-	ldaCmd.AddCommand(serveCmd)
-	ldaCmd.AddCommand(reloadCmd)
-	ldaCmd.AddCommand(configCmd)
+	LdaCmd.AddCommand(versionCmd)
+	LdaCmd.AddCommand(collectCmd)
+	LdaCmd.AddCommand(startCmd)
+	LdaCmd.AddCommand(stopCmd)
+	LdaCmd.AddCommand(installCmd)
+	LdaCmd.AddCommand(uninstallCmd)
+	LdaCmd.AddCommand(serveCmd)
+	LdaCmd.AddCommand(reloadCmd)
+	LdaCmd.AddCommand(configCmd)
 }
 
 func includeShowFlagsForLda(cmd *cobra.Command) {
@@ -202,7 +203,7 @@ func setupConfig() {
 
 // Execute is the entry point for the command line
 func Execute() {
-	if err := ldaCmd.Execute(); err != nil {
+	if err := LdaCmd.Execute(); err != nil {
 		logging.Log.Err(err).Msg("Failed to execute main lda command")
 		os.Exit(1)
 	}
