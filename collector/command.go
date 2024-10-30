@@ -1,12 +1,13 @@
 package collector
 
 import (
-	"lda/config"
-	"lda/database"
-	gen "lda/gen/api/v1"
-	"lda/logging"
 	"regexp"
 	"time"
+
+	"github.com/devzero-inc/local-developer-analytics/config"
+	"github.com/devzero-inc/local-developer-analytics/database"
+	gen "github.com/devzero-inc/local-developer-analytics/gen/api/v1"
+	"github.com/devzero-inc/local-developer-analytics/logging"
 )
 
 // Command is the model for command

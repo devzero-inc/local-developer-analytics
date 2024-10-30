@@ -3,9 +3,10 @@ package resources
 import (
 	"encoding/json"
 	"fmt"
-	"lda/collector"
-	"lda/process"
 	"math"
+
+	"github.com/devzero-inc/local-developer-analytics/collector"
+	"github.com/devzero-inc/local-developer-analytics/process"
 )
 
 // ChartData represents the overall structure for a Chart.js chart configuration.

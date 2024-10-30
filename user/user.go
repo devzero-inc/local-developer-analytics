@@ -4,15 +4,16 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"lda/collector"
-	"lda/config"
-	"lda/database"
-	"lda/logging"
-	"lda/util"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
+
+	"github.com/devzero-inc/local-developer-analytics/collector"
+	"github.com/devzero-inc/local-developer-analytics/config"
+	"github.com/devzero-inc/local-developer-analytics/database"
+	"github.com/devzero-inc/local-developer-analytics/logging"
+	"github.com/devzero-inc/local-developer-analytics/util"
 
 	"github.com/manifoldco/promptui"
 )

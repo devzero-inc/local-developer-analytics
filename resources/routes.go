@@ -3,14 +3,15 @@ package resources
 import (
 	"embed"
 	"encoding/json"
-	"lda/collector"
-	"lda/logging"
-	"lda/process"
 	"net/http"
 	"strconv"
 	"sync"
 	"text/template"
 	"time"
+
+	"github.com/devzero-inc/local-developer-analytics/collector"
+	"github.com/devzero-inc/local-developer-analytics/logging"
+	"github.com/devzero-inc/local-developer-analytics/process"
 )
 
 // Embedding directory

@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"lda/config"
+
+	"github.com/devzero-inc/local-developer-analytics/config"
 
 	"github.com/spf13/cobra"
 )

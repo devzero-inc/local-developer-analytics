@@ -3,9 +3,10 @@ package client
 import (
 	"context"
 	"fmt"
-	gen "lda/gen/api/v1"
-	"lda/logging"
 	"time"
+
+	gen "github.com/devzero-inc/local-developer-analytics/gen/api/v1"
+	"github.com/devzero-inc/local-developer-analytics/logging"
 
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"

@@ -3,13 +3,14 @@ package collector
 import (
 	"context"
 	"fmt"
-	"lda/client"
-	gen "lda/gen/api/v1"
-	"lda/process"
-	"lda/util"
 	"net"
 	"strings"
 	"sync"
+
+	"github.com/devzero-inc/local-developer-analytics/client"
+	gen "github.com/devzero-inc/local-developer-analytics/gen/api/v1"
+	"github.com/devzero-inc/local-developer-analytics/process"
+	"github.com/devzero-inc/local-developer-analytics/util"
 
 	"github.com/rs/zerolog"
 

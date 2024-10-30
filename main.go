@@ -1,7 +1,7 @@
 package main
 
 import (
-	"lda/cmd"
+	"github.com/devzero-inc/local-developer-analytics/cmd"
 )
 
 func main() {

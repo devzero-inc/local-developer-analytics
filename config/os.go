@@ -2,12 +2,13 @@ package config
 
 import (
 	"fmt"
-	"lda/util"
 	"os"
 	"os/user"
 	"path"
 	"path/filepath"
 	"runtime"
+
+	"github.com/devzero-inc/local-developer-analytics/util"
 
 	"github.com/manifoldco/promptui"
 )

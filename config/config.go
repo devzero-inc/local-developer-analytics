@@ -4,10 +4,11 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
-	"lda/util"
 	"os"
 	"os/user"
 	"path/filepath"
+
+	"github.com/devzero-inc/local-developer-analytics/util"
 
 	"github.com/pkg/errors"
 

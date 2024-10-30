@@ -5,11 +5,12 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
-	"lda/config"
-	"lda/util"
 	"os/exec"
 	"os/user"
 	"path/filepath"
+
+	"github.com/devzero-inc/local-developer-analytics/config"
+	"github.com/devzero-inc/local-developer-analytics/util"
 
 	"github.com/spf13/afero"
 

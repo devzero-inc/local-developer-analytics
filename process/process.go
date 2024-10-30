@@ -3,9 +3,10 @@ package process
 import (
 	"errors"
 	"fmt"
-	"lda/database"
-	gen "lda/gen/api/v1"
 	"time"
+
+	"github.com/devzero-inc/local-developer-analytics/database"
+	gen "github.com/devzero-inc/local-developer-analytics/gen/api/v1"
 
 	"github.com/rs/zerolog"
 )

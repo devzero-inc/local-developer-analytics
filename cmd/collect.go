@@ -1,13 +1,14 @@
 package cmd
 
 import (
-	"lda/client"
-	"lda/collector"
-	"lda/config"
-	"lda/logging"
-	"lda/process"
-	"lda/user"
 	"time"
+
+	"github.com/devzero-inc/local-developer-analytics/client"
+	"github.com/devzero-inc/local-developer-analytics/collector"
+	"github.com/devzero-inc/local-developer-analytics/config"
+	"github.com/devzero-inc/local-developer-analytics/logging"
+	"github.com/devzero-inc/local-developer-analytics/process"
+	"github.com/devzero-inc/local-developer-analytics/user"
 
 	"github.com/pkg/errors"
 
