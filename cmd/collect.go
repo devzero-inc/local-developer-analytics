@@ -15,23 +15,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	collectCmd = &cobra.Command{
+// newCollectCmd creates a new collect command.
+func newCollectCmd() *cobra.Command {
+	collectCmd := &cobra.Command{
 		Use:   "collect",
 		Short: "Collect command and system information",
 		Long:  `Collect and process command and system information.`,
-
-		RunE: collect,
+		RunE:  collect,
 	}
-)
 
-func init() {
-	includeShowFlagsForCollect(collectCmd)
-}
+	collectCmd.Flags().BoolP("auto-credentials", "a", false, "Try to automatically generate the credentails")
+	collectCmd.Flags().BoolP("workspace", "w", false, "Is collection executed in a DevZero workspace")
 
-func includeShowFlagsForCollect(cmd *cobra.Command) {
-	cmd.Flags().BoolP("auto-credentials", "a", false, "Try to automatically generate the credentails")
-	cmd.Flags().BoolP("workspace", "w", false, "Is collection executed in a DevZero workspace")
+	return collectCmd
 }
 
 func collect(cmd *cobra.Command, _ []string) error {

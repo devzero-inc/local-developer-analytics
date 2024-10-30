@@ -21,69 +21,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	// Verbose Define verbose flag variables
-	Verbose bool
-
-	// LdaCmd is the main command for the LDA project
-	LdaCmd = &cobra.Command{
-		Use:   "lda",
-		Short: "Command line manager for LDA project.",
-		Long: `Command line manager for LDA Project.
-        Complete documentation is available at https://devzero.io`,
-		Run: lda,
-	}
-
-	installCmd = newInstallCmd()
-
-	uninstallCmd = &cobra.Command{
-		Use:   "uninstall",
-		Short: "Install daemon runner",
-		Long:  `Uninstall daemon runner for LDA Project.`,
-		RunE:  uninstall,
-	}
-
-	startCmd = &cobra.Command{
-		Use:   "start",
-		Short: "Start daemon runner",
-		Long:  `Start daemon runner for LDA Project.`,
-		RunE:  start,
-	}
-
-	stopCmd = &cobra.Command{
-		Use:   "stop",
-		Short: "Stop daemon runner",
-		Long:  `Stop daemon runner for LDA Project.`,
-		RunE:  stop,
-	}
-
-	reloadCmd = &cobra.Command{
-		Use:   "reload",
-		Short: "Reload daemon runner",
-		Long:  `Reload daemon runner for LDA Project.`,
-		RunE:  reload,
-	}
-
-	configCmd = &cobra.Command{
-		Use:   "config",
-		Short: "Print current configuration",
-		Long:  `Display current configuration for LDA Project.`,
-		RunE:  displayConfig,
-	}
-
-	serveCmd = &cobra.Command{
-		Use:   "serve",
-		Short: "Serve local client",
-		Long:  `Serve local frontend client for LDA Project.`,
-		RunE:  serve,
-	}
-)
+// Verbose Define verbose flag variables
+var Verbose bool
 
 var installFlags struct {
 	shells         []string
 	nonInteractive bool
 }
 
+// newInstallCmd creates a new install command
 func newInstallCmd() *cobra.Command {
 	installCmd := &cobra.Command{
 		Use:   "install",
@@ -93,10 +39,111 @@ func newInstallCmd() *cobra.Command {
 	}
 
 	installCmd.Flags().StringSliceVarP(&installFlags.shells, "shell", "s", []string{}, fmt.Sprintf("Shells to instrument %+v; --shell=all for all shells", config.SupportedShells))
-
 	installCmd.Flags().BoolVarP(&installFlags.nonInteractive, "non-interactive", "n", false, "Run installation in non-interactive mode")
+	installCmd.Flags().BoolP("auto-credentials", "a", false, "Try to automatically generate the credentails")
+	installCmd.Flags().BoolP("workspace", "w", false, "Is collection executed in a DevZero workspace")
 
 	return installCmd
+}
+
+func NewLdaCmd() *cobra.Command {
+	ldaCmd := &cobra.Command{
+		Use:   "lda",
+		Short: "Command line manager for LDA project.",
+		Long: `Command line manager for LDA Project.
+        Complete documentation is available at https://devzero.io`,
+		Run: lda,
+	}
+
+	ldaCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Verbosity")
+
+	ldaCmd.AddCommand(
+		newVersionCmd(),
+		newCollectCmd(),
+		newStartCmd(),
+		newStopCmd(),
+		newInstallCmd(),
+		newUninstallCmd(),
+		newServeCmd(),
+		newReloadCmd(),
+		newConfigCmd(),
+	)
+
+	return ldaCmd
+}
+
+// newUninstallCmd creates a new uninstall command
+func newUninstallCmd() *cobra.Command {
+	uninstallCmd := &cobra.Command{
+		Use:   "uninstall",
+		Short: "Uninstall daemon runner",
+		Long:  `Uninstall daemon runner for LDA Project.`,
+		RunE:  uninstall,
+	}
+
+	return uninstallCmd
+}
+
+// newStartCmd creates a new start command
+func newStartCmd() *cobra.Command {
+	startCmd := &cobra.Command{
+		Use:   "start",
+		Short: "Start daemon runner",
+		Long:  `Start daemon runner for LDA Project.`,
+		RunE:  start,
+	}
+
+	return startCmd
+}
+
+// newStopCmd creates a new stop command
+func newStopCmd() *cobra.Command {
+	stopCmd := &cobra.Command{
+		Use:   "stop",
+		Short: "Stop daemon runner",
+		Long:  `Stop daemon runner for LDA Project.`,
+		RunE:  stop,
+	}
+
+	return stopCmd
+}
+
+// newServeCmd creates a new serve command
+func newServeCmd() *cobra.Command {
+	serveCmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Serve local client",
+		Long:  `Serve local frontend client for LDA Project.`,
+		RunE:  serve,
+	}
+
+	serveCmd.Flags().StringP("port", "p", "8080", "Port to serve the frontend client")
+
+	return serveCmd
+}
+
+// newConfigCmd creates a new config command
+func newConfigCmd() *cobra.Command {
+	configCmd := &cobra.Command{
+		Use:   "config",
+		Short: "Print current configuration",
+		Long:  `Display current configuration for LDA Project.`,
+		RunE:  displayConfig,
+	}
+
+	return configCmd
+}
+
+// newReloadCmd creates a new reload command
+func newReloadCmd() *cobra.Command {
+	reloadCmd := &cobra.Command{
+		Use:   "reload",
+		Short: "Reload daemon runner",
+		Long:  `Reload daemon runner for LDA Project.`,
+		RunE:  reload,
+	}
+
+	return reloadCmd
 }
 
 const (
@@ -107,35 +154,7 @@ const (
 )
 
 func init() {
-
-	includeShowFlagsForLda(LdaCmd)
-	includeShowFlagsForServe(serveCmd)
-	includeShowFlagsForInstall(installCmd)
-
 	cobra.OnInitialize(setupConfig)
-
-	LdaCmd.AddCommand(versionCmd)
-	LdaCmd.AddCommand(collectCmd)
-	LdaCmd.AddCommand(startCmd)
-	LdaCmd.AddCommand(stopCmd)
-	LdaCmd.AddCommand(installCmd)
-	LdaCmd.AddCommand(uninstallCmd)
-	LdaCmd.AddCommand(serveCmd)
-	LdaCmd.AddCommand(reloadCmd)
-	LdaCmd.AddCommand(configCmd)
-}
-
-func includeShowFlagsForLda(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Verbosity")
-}
-
-func includeShowFlagsForServe(cmd *cobra.Command) {
-	cmd.Flags().StringP("port", "p", "8080", "Port to serve the frontend client")
-}
-
-func includeShowFlagsForInstall(cmd *cobra.Command) {
-	cmd.Flags().BoolP("auto-credentials", "a", false, "Try to automatically generate the credentails")
-	cmd.Flags().BoolP("workspace", "w", false, "Is collection executed in a DevZero workspace")
 }
 
 func setupConfig() {
@@ -203,7 +222,8 @@ func setupConfig() {
 
 // Execute is the entry point for the command line
 func Execute() {
-	if err := LdaCmd.Execute(); err != nil {
+	ldaCmd := NewLdaCmd()
+	if err := ldaCmd.Execute(); err != nil {
 		logging.Log.Err(err).Msg("Failed to execute main lda command")
 		os.Exit(1)
 	}
