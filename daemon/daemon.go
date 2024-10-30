@@ -97,27 +97,23 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 
 	commands := strings.Split(d.config.BaseCommandPath, " ")
 
-	basePath := BaseCollectCommand
+	collectCmd := []string{}
 
 	if len(commands) > 0 && commands[0] != "lda" {
-
-		var path string
 		for _, command := range commands {
 			d.logger.Debug().Msgf("Checking command path: %s", command)
+			collectCmd = append(collectCmd, command)
 			if command == "lda" {
 				break
 			}
-			path = path + command + " "
 		}
 
-		basePath = path + basePath
 	}
 
-	d.logger.Info().Msgf("Base path: %s", basePath)
+	collectCmd = append(collectCmd, BaseCollectCommand)
 
-	collectCmd := []string{
-		basePath,
-	}
+	d.logger.Info().Msgf("Base path: %v", collectCmd)
+
 	if d.config.AutoCredential {
 		collectCmd = append(collectCmd, "-a")
 	}
