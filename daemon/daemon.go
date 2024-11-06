@@ -95,15 +95,21 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 		tmpConf["Group"] = group.Name
 	}
 
+	d.logger.Debug().Msgf("Base command path: %s", d.config.BaseCommandPath)
 	commands := strings.Split(d.config.BaseCommandPath, " ")
 
 	collectCmd := []string{}
 
 	// TODO: fix this thing, as it is absolutly not robust, and it might not work in all cases
 	if len(commands) > 0 && commands[0] != "lda" {
-		if strings.Contains(d.config.ExePath, commands[0]) {
+		// Extract the executable name from ExePath
+		executableName := filepath.Base(d.config.ExePath)
+
+		// Compare and adjust the commands slice
+		if executableName == commands[0] {
 			commands = commands[1:]
 		}
+
 		for _, command := range commands {
 			d.logger.Debug().Msgf("Checking command path: %s", command)
 			collectCmd = append(collectCmd, command)
