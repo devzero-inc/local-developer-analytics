@@ -31,6 +31,8 @@ func newCollectCmd() *cobra.Command {
 }
 
 func collect(cmd *cobra.Command, _ []string) error {
+	setupConfig()
+
 	autoCredentials, err := cmd.Flags().GetBool("auto-credentials")
 	if err != nil {
 		logging.Log.Error().Err(err).Msg("Failed to get auto-credentials flag")

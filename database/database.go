@@ -10,7 +10,7 @@ import (
 	"github.com/devzero-inc/local-developer-analytics/util"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // DB is the database connection.
@@ -21,7 +21,7 @@ func Setup(ldaDir string, user *user.User) {
 
 	dbPath := filepath.Join(ldaDir, "lda.db")
 
-	db, err := sqlx.Connect("sqlite3", dbPath)
+	db, err := sqlx.Connect("sqlite", dbPath)
 	if err != nil {
 		fmt.Printf("Failed to setup database: %s\n", err)
 		os.Exit(1)

@@ -153,10 +153,6 @@ const (
 	hours = 24
 )
 
-func init() {
-	cobra.OnInitialize(setupConfig)
-}
-
 func setupConfig() {
 	// setting up the system configuration
 	config.SetupSysConfig()
@@ -237,6 +233,8 @@ func lda(cmd *cobra.Command, _ []string) {
 
 func reload(_ *cobra.Command, _ []string) error {
 
+	setupConfig()
+
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
@@ -259,6 +257,8 @@ func reload(_ *cobra.Command, _ []string) error {
 }
 
 func start(_ *cobra.Command, _ []string) error {
+
+	setupConfig()
 
 	user.ConfigureUserSystemInfo(user.Conf)
 
@@ -283,6 +283,8 @@ func start(_ *cobra.Command, _ []string) error {
 
 func stop(_ *cobra.Command, _ []string) error {
 
+	setupConfig()
+
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
@@ -305,6 +307,8 @@ func stop(_ *cobra.Command, _ []string) error {
 }
 
 func install(cmd *cobra.Command, _ []string) error {
+	setupConfig()
+
 	// validate the stuff
 	if len(installFlags.shells) > 0 {
 		for _, shellType := range installFlags.shells {
@@ -391,6 +395,8 @@ func install(cmd *cobra.Command, _ []string) error {
 
 func uninstall(_ *cobra.Command, _ []string) error {
 
+	setupConfig()
+
 	user.ConfigureUserSystemInfo(user.Conf)
 
 	daemonConf := &daemon.Config{
@@ -451,6 +457,8 @@ func displayConfig(_ *cobra.Command, _ []string) error {
 }
 
 func serve(cmd *cobra.Command, _ []string) error {
+	setupConfig()
+
 	portFlag := cmd.Flag("port").Value
 
 	fmt.Fprintf(config.SysConfig.Out, "Serving local frontend client on http://localhost:%v\n", portFlag)

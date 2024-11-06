@@ -63,7 +63,7 @@ all: build debug
 
 ## Build binary
 build: proto
-	CGO_ENABLED=1 GOOS=$(UNAME) GOARCH=$(ARCH) go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
+	CGO_ENABLED=0 GOOS=$(UNAME) GOARCH=$(ARCH) go build -a -tags netgo -ldflags="$(LDFLAGS)" -o "$(TARGET)" .
 
 ## Install binary to GOPATH
 install: proto
