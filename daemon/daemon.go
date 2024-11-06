@@ -99,7 +99,11 @@ func (d *Daemon) InstallDaemonConfiguration() error {
 
 	collectCmd := []string{}
 
+	// TODO: fix this thing, as it is absolutly not robust, and it might not work in all cases
 	if len(commands) > 0 && commands[0] != "lda" {
+		if strings.Contains(d.config.ExePath, commands[0]) {
+			commands = commands[1:]
+		}
 		for _, command := range commands {
 			d.logger.Debug().Msgf("Checking command path: %s", command)
 			collectCmd = append(collectCmd, command)
